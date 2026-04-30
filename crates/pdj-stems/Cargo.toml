@@ -1,0 +1,10 @@
+[package]
+name        = "pdj-stems"
+version     = "0.0.1"
+edition     = "2021"
+
+[dependencies]
+pdj-core  = { path = "../pdj-core" }
+serde     = { workspace = true }
+thiserror = { workspace = true }
+tracing   = { workspace = true }

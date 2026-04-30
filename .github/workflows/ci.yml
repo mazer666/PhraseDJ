@@ -1,0 +1,161 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Rust: format, lint, test, coverage
+  # -------------------------------------------------------------------------
+  rust:
+    name: Rust (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-22.04]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Cache Cargo registry
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Run tests
+        run: cargo test --workspace --all-features
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Generate coverage report
+        run: |
+          cargo llvm-cov --workspace --all-features \
+            --ignore-filename-regex "apps/desktop/src-tauri/src/main.rs" \
+            --lcov --output-path lcov.info
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'macos-14'
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
+
+  # -------------------------------------------------------------------------
+  # TypeScript / React: lint, test
+  # -------------------------------------------------------------------------
+  frontend:
+    name: Frontend (Node ${{ matrix.node }})
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node: ["20"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: apps/desktop
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        working-directory: apps/desktop
+        run: pnpm exec tsc --noEmit
+
+      - name: Run tests
+        working-directory: apps/desktop
+        run: pnpm test
+
+  # -------------------------------------------------------------------------
+  # C++ audio engine: build + test
+  # -------------------------------------------------------------------------
+  cpp:
+    name: C++ engine (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-22.04]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.28"
+
+      - name: Configure
+        working-directory: native/audio
+        # Note: GoogleTest is fetched from the internet during configure.
+        # In environments without internet, set FETCHCONTENT_FULLY_DISCONNECTED
+        # and provide a local mirror.
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=clang++
+
+      - name: Build
+        working-directory: native/audio
+        run: cmake --build build --parallel
+
+      - name: Test
+        working-directory: native/audio/build
+        run: ctest --output-on-failure
+
+  # -------------------------------------------------------------------------
+  # File-length linter (600-line hard limit)
+  # -------------------------------------------------------------------------
+  file-length:
+    name: File length check
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run file-length linter
+        run: bash tools/check_file_size.sh
+
+  # -------------------------------------------------------------------------
+  # Dependency licence audit
+  # -------------------------------------------------------------------------
+  licence:
+    name: Licence audit
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@cargo-deny
+
+      - name: Check licences
+        run: cargo deny check licenses

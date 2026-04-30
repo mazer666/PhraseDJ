@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "io.phrasedj.settings",
+  "title": "PhraseDJ Settings",
+  "description": "Schema for PhraseDJ settings.toml and defaults.toml",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sample_rate":     { "type": "integer", "enum": [44100, 48000, 88200, 96000] },
+        "buffer_size":     { "type": "integer", "enum": [64, 128, 256, 512, 1024] },
+        "output_device":   { "type": "string" },
+        "cue_device":      { "type": "string" },
+        "pitch_range_pct": { "type": "number", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "library": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "music_root":      { "type": "string" },
+        "follow_symlinks": { "type": "boolean" },
+        "ignore_files":    { "type": "array", "items": { "type": "string" } },
+        "backup_count":    { "type": "integer", "minimum": 0, "maximum": 30 },
+        "stem_cache_gb":   { "type": "number", "minimum": 1 }
+      }
+    },
+    "stems": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model":             { "type": "string" },
+        "stem_count":        { "type": "integer", "enum": [4, 6] },
+        "auto_analyse":      { "type": "boolean" },
+        "max_parallel_jobs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "lyrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "online_lookup":        { "type": "boolean" },
+        "online_service_url":   { "type": "string", "format": "uri" },
+        "whisper_model":        { "type": "string" },
+        "online_timeout_secs":  { "type": "integer", "minimum": 1, "maximum": 60 }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target_fps":    { "type": "integer", "enum": [30, 60, 120] },
+        "default_mode":  { "type": "string", "enum": ["classic", "stem", "macro"] }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "update_check": { "type": "boolean" }
+      }
+    }
+  }
+}

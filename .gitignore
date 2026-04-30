@@ -1,0 +1,38 @@
+# Rust / Cargo
+/target/
+Cargo.lock   # intentionally tracked for binary crates; remove this line if so
+
+# Node / pnpm
+node_modules/
+apps/desktop/dist/
+apps/desktop/.pnpm-store/
+
+# C++ build artefacts
+native/audio/build/
+*.o
+*.a
+*.so
+*.dylib
+
+# Tauri generated files
+apps/desktop/src-tauri/gen/
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+
+# Editor config
+.idea/
+.vscode/settings.json
+*.code-workspace
+
+# Test / coverage artefacts
+lcov.info
+*.profraw
+*.profdata
+
+# PhraseDJ runtime data (never commit user data)
+*.db
+*.db-wal
+*.db-shm

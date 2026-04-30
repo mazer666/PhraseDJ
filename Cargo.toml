@@ -1,0 +1,36 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/desktop/src-tauri",
+    "crates/pdj-core",
+    "crates/pdj-library",
+    "crates/pdj-engine-bridge",
+    "crates/pdj-stems",
+    "crates/pdj-macros",
+    "crates/pdj-lyrics",
+    "crates/pdj-midi",
+    "crates/pdj-plugins",
+]
+
+# Workspace-wide dependency versions – individual crates inherit with
+# `dependency = { workspace = true }` to keep versions in sync.
+[workspace.dependencies]
+tokio          = { version = "1", features = ["full"] }
+serde          = { version = "1", features = ["derive"] }
+serde_json     = "1"
+thiserror      = "1"
+anyhow         = "1"
+tracing        = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+toml           = "0.8"
+uuid           = { version = "1", features = ["v4", "serde"] }
+rusqlite       = { version = "0.32", features = ["bundled"] }
+directories    = "5"
+
+# Common profile tweaks.
+[profile.dev]
+opt-level = 1      # faster incremental compile while keeping some optimisation
+
+[profile.release]
+lto = true
+codegen-units = 1

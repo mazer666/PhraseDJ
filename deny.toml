@@ -1,0 +1,31 @@
+# cargo-deny configuration for PhraseDJ.
+# Audits dependencies for license compatibility with MPL-2.0.
+
+[licenses]
+# Allow licences compatible with MPL-2.0.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MPL-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "Zlib",
+]
+# Deny anything copyleft-incompatible (GPL-2.0 would create issues).
+deny = [
+    "GPL-2.0",
+    "AGPL-3.0",
+]
+# Warn on unknown, don't error yet (some crates have non-standard fields).
+unlicensed = "warn"
+copyleft = "warn"
+
+[advisories]
+# Deny crates with known security vulnerabilities.
+vulnerability = "deny"
+unmaintained = "warn"
+yanked = "deny"

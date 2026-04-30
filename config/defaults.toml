@@ -1,0 +1,112 @@
+# PhraseDJ — shipped default settings
+#
+# This file is read-only at runtime and is bundled with the application.
+# User overrides live in:
+#   macOS:   ~/Library/Application Support/PhraseDJ/settings.toml
+#   Linux:   ~/.config/PhraseDJ/settings.toml
+#   Windows: %APPDATA%\PhraseDJ\settings.toml
+#
+# Never hard-code these values in source code. Always read from the
+# settings loader (pdj-core::config).
+
+# ---------------------------------------------------------------------------
+# Audio engine
+# ---------------------------------------------------------------------------
+[audio]
+
+# Output sample rate in Hz.
+# 44100 is universal; 48000 is common for pro interfaces.
+sample_rate = 44100
+
+# Frames per audio callback buffer.
+# Smaller = lower latency but higher CPU risk.
+# 128 frames at 44100 Hz = ~2.9 ms one-way latency.
+buffer_size = 128
+
+# Output device name. Empty = use system default.
+output_device = ""
+
+# Headphone / cue output device. Empty = same as output_device (split stereo).
+cue_device = ""
+
+# Vinyl-style pitch fader range in percent (symmetric around 0).
+pitch_range_pct = 8.0
+
+# ---------------------------------------------------------------------------
+# Library
+# ---------------------------------------------------------------------------
+[library]
+
+# Root folder used to compute portable relative paths.
+music_root = "~/Music"
+
+# Whether to follow symbolic links when scanning folders.
+follow_symlinks = false
+
+# Glob patterns for files to skip during scan.
+ignore_files = ["*.tmp", "*.part", "*.crdownload"]
+
+# Number of nightly database backup snapshots to retain before rotating.
+backup_count = 7
+
+# Maximum stem cache size in gigabytes (LRU pruning when exceeded).
+stem_cache_gb = 50.0
+
+# ---------------------------------------------------------------------------
+# Stem separation (AI)
+# ---------------------------------------------------------------------------
+[stems]
+
+# AI model identifier. "htdemucs" is the default 4-stem model.
+model = "htdemucs"
+
+# Number of stems to separate (4 = vocals/drums/bass/other).
+# 6-stem (adds guitar/piano) is optional but heavier.
+stem_count = 4
+
+# Automatically analyse new tracks on import.
+auto_analyse = true
+
+# Maximum parallel analysis jobs (0 = n_performance_cores − 1).
+max_parallel_jobs = 0
+
+# ---------------------------------------------------------------------------
+# Lyrics
+# ---------------------------------------------------------------------------
+[lyrics]
+
+# Allow PhraseDJ to fetch lyrics from the internet.
+# OFF by default — the user opts in via the Settings UI.
+# When enabled, only artist + title + duration are sent; never audio data.
+online_lookup = false
+
+# The online service endpoint. LRCLib is a free, open, no-account API.
+online_service_url = "https://lrclib.net/api/get"
+
+# Whisper model for local offline alignment.
+# "ggml-base.en" is fast and accurate for English.
+# Change to "ggml-small" for better multilingual support.
+whisper_model = "ggml-base.en"
+
+# Timeout for online lookups in seconds.
+online_timeout_secs = 5
+
+# ---------------------------------------------------------------------------
+# UI
+# ---------------------------------------------------------------------------
+[ui]
+
+# Target display refresh rate for waveform rendering (60 or 120 fps).
+target_fps = 60
+
+# Default mix mode on startup: "classic", "stem", or "macro".
+default_mode = "classic"
+
+# ---------------------------------------------------------------------------
+# Network and privacy
+# ---------------------------------------------------------------------------
+[network]
+
+# Check for application updates at startup (opt-in).
+# OFF by default. No telemetry is ever sent.
+update_check = false

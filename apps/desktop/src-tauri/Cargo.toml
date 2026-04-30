@@ -1,0 +1,37 @@
+[package]
+name        = "phrasedj-desktop"
+version     = "0.0.1"
+edition     = "2021"
+description = "PhraseDJ desktop application shell"
+
+# This crate is only a binary (the Tauri app) – not a library.
+[[bin]]
+name = "phrasedj"
+path = "src/main.rs"
+
+[lib]
+# The lib target is used by Tauri's mobile scaffolding and integration tests.
+name = "phrasedj_lib"
+crate-type = ["staticlib", "cdylib", "lib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri v2 core and plugins.
+tauri              = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs     = "2"
+tauri-plugin-shell  = "2"
+
+# Logging.
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Async runtime (used for Tauri commands that need async I/O).
+tokio = { version = "1", features = ["rt", "macros"] }
+
+# Shared PhraseDJ types and settings loader.
+pdj-core = { path = "../../../crates/pdj-core" }
+
+# Profile settings belong in the workspace root Cargo.toml, not here.
