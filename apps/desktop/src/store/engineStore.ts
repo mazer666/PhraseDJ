@@ -15,7 +15,7 @@ const POLL_INTERVAL_MS = 50; // 20 fps – plenty for transport indicators
 /** Payload from the Rust `forward_stem_events` bridge. */
 interface StemStatusEvent {
   track_id: string;
-  status: "pending" | "running" | "cached" | "failed";
+  status: "pending" | "running" | "model_downloading" | "cached" | "failed";
   progress: number | null;
   reason: string | null;
 }
