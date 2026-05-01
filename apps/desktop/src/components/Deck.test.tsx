@@ -127,7 +127,7 @@ describe("Deck (side A)", () => {
     useEngineStore.setState({ faderA: 0.8 } as any);
     render(<Deck side="A" />);
     const sliders = screen.getAllByRole("slider") as HTMLInputElement[];
-    expect(parseFloat(sliders[0].value)).toBeCloseTo(0.8);
+    expect(parseFloat(sliders[sliders.length - 1].value)).toBeCloseTo(0.8);
   });
 });
 

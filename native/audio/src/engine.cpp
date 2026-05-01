@@ -255,7 +255,8 @@ PdjResult pdj_engine_analyse_bpm(PdjEngine*  engine,
 float pdj_engine_get_bpm(PdjEngine* engine, uint32_t deck_index) {
     if (!valid_deck(engine, deck_index)) return 0.0f;
     std::lock_guard<std::mutex> lk(engine->control_mutex);
-    return engine->beatgrids[deck_index].bpm;
+    const float bpm = engine->beatgrids[deck_index].bpm;
+    return bpm > 0.0f ? bpm : 120.0f;
 }
 
 // ---------------------------------------------------------------------------
