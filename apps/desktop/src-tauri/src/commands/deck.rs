@@ -81,10 +81,16 @@ pub fn deck_load(deck: u32, path: String, state: State<'_, AppState>)
     
     if let Some(stems) = has_stems {
         let arr = [&stems.vocals.as_path(), &stems.drums.as_path(), &stems.bass.as_path(), &stems.other.as_path()];
-        engine.load_stems(deck, &p, &arr).map_err(|e| e.to_string())
-    } else {
-        engine.load(deck, &p).map_err(|e| e.to_string())
+        match engine.load_stems(deck, &p, &arr) {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                tracing::warn!(deck, error = %e, "stem loading failed, falling back to normal load");
+                // Fall through to normal load below.
+            }
+        }
     }
+
+    engine.load(deck, &p).map_err(|e| e.to_string())
 }
 
 /// Toggle play/pause on a deck.

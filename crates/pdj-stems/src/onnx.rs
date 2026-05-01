@@ -7,27 +7,22 @@
 /// CoreML execution provider on macOS for hardware acceleration even on
 /// non-Apple-Silicon machines.
 ///
-/// # Current state (Phase 2 stub)
+/// # Implementation
 ///
-/// Linking ORT into a Rust binary requires the `ort` crate and a matching
-/// native library.  Until the model file is packaged and the download flow
-/// is built, this module contains:
+/// The backend lazily loads the HTDemucs ONNX model on first inference.
+/// Input audio is deinterleaved into an ndarray tensor of shape
+/// `[batch=1, channels, frames]`, run through the ORT session, and the
+/// output `[1, 4, channels, frames]` is re-interleaved back into PCM
+/// buffers.
 ///
-/// 1. `OnnxBackend::is_available()` — always true (ONNX is always compiled in).
-/// 2. `OnnxBackend::infer()` — a **stub** that returns zeroed stems, same as
-///    the MLX stub.
-///
-/// # Replacing the stub
-///
-/// 1. Add `ort = "2"` to `Cargo.toml` (done).
-/// 2. Load the exported `htdemucs.onnx` model in `new()`.
-/// 3. Run inference in `infer()` and fill in real stems.
-/// 4. Delete this doc note.
+/// The model file must be placed at
+/// `<app-support>/PhraseDJ/models/htdemucs.onnx`.
 ///
 /// See `specs/03-ai-stems.md §2` for model details.
 use std::sync::Mutex;
 use pdj_core::{Error, Result};
 use ort::{GraphOptimizationLevel, Session};
+use ndarray::Array3;
 
 use crate::backend::{InferenceRequest, InferenceResult, PcmBuffer, StemBackend};
 
@@ -108,56 +103,68 @@ impl StemBackend for OnnxBackend {
             backend = "onnx",
             "Running ONNX inference",
         );
-        
+
         let session_guard = match self.get_or_load_session() {
             Ok(g) => g,
             Err(e) => {
-                tracing::warn!("ONNX model load failed: {}. Falling back to stub zeros.", e);
-                return Ok(todo_stub_inference(request));
+                tracing::error!("ONNX model load failed: {}", e);
+                return Err(Error::other(format!("Model missing or invalid: {}", e)));
             }
         };
-        
+
         let session = session_guard.as_ref().unwrap();
-        
-        // Convert request.audio.samples to ndarray [batch=1, channels, samples]
+
         let frames = request.audio.frame_count();
         let channels = request.audio.channels as usize;
-        
-        // This relies on ort::Value::from_array which we would use with ndarray.
-        // For now, since we don't have the model or ndarray dependency, we
-        // simulate the inference with the stub and log the success.
-        // Real implementation requires ndarray crate.
-        
-        tracing::info!("ONNX model loaded successfully, simulating inference for {} frames", frames);
-        
-        // Simulated execution ...
-        let _ = session; 
-        
-        Ok(todo_stub_inference(request))
-    }
-}
 
-// ---------------------------------------------------------------------------
-// Stub — remove when real ONNX inference is implemented
-// ---------------------------------------------------------------------------
+        // Deinterleave: HTDemucs expects [batch=1, channels, frames]
+        let mut deinterleaved = vec![0.0f32; frames * channels];
+        for c in 0..channels {
+            for f in 0..frames {
+                deinterleaved[c * frames + f] = request.audio.samples[f * channels + c];
+            }
+        }
 
-/// Return four zeroed stem buffers matching the input shape.
-///
-/// **TODO(spec):** Replace with ORT session run once `htdemucs.onnx` is
-/// packaged.  Reference: `specs/03-ai-stems.md §2`.
-fn todo_stub_inference(request: InferenceRequest) -> InferenceResult {
-    let template = PcmBuffer {
-        samples:     vec![0.0_f32; request.audio.samples.len()],
-        channels:    request.audio.channels,
-        sample_rate: request.audio.sample_rate,
-    };
-    InferenceResult {
-        stems: [
-            template.clone(),
-            template.clone(),
-            template.clone(),
-            template,
-        ],
+        let input_tensor = Array3::from_shape_vec((1, channels, frames), deinterleaved)
+            .map_err(|e| Error::other(format!("Shape error: {}", e)))?;
+
+        let inputs = ort::inputs![input_tensor].map_err(|e| Error::other(e.to_string()))?;
+        let outputs = session.run(inputs).map_err(|e| Error::other(e.to_string()))?;
+
+        // Extract [1, 4, channels, frames]
+        let out_tensor = outputs[0].try_extract_tensor::<f32>()
+            .map_err(|e| Error::other(e.to_string()))?;
+            
+        // We know the shape should be [1, 4, channels, frames]
+        // But let's safely iterate and re-interleave
+        // out_tensor acts as an ArrayViewD
+        let mut stems = Vec::new();
+        for stem_idx in 0..4 {
+            let mut interleaved = vec![0.0f32; frames * channels];
+            for c in 0..channels {
+                for f in 0..frames {
+                    // Indexing into [batch, stem, channel, frame] -> [0, stem_idx, c, f]
+                    let val = out_tensor[[0, stem_idx, c, f]];
+                    interleaved[f * channels + c] = val;
+                }
+            }
+            stems.push(PcmBuffer {
+                samples: interleaved,
+                channels: request.audio.channels,
+                sample_rate: request.audio.sample_rate,
+            });
+        }
+
+        tracing::info!("ONNX inference completed for {} frames", frames);
+
+        Ok(InferenceResult {
+            stems: [
+                stems[0].clone(),
+                stems[1].clone(),
+                stems[2].clone(),
+                stems[3].clone(),
+            ],
+        })
     }
 }
 
@@ -180,17 +187,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn stub_returns_four_stems_correct_shape() {
-        let backend = OnnxBackend::new();
-        let req     = make_request(512, 1); // mono
-        let result  = backend.infer(req).expect("stub infer");
-        assert_eq!(result.stems.len(), 4);
-        for stem in &result.stems {
-            assert_eq!(stem.samples.len(), 512);
-            assert_eq!(stem.channels, 1);
-        }
-    }
+    // Test removed because stub inference was replaced by real execution.
 
     #[test]
     fn onnx_is_always_available() {

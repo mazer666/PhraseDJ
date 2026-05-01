@@ -72,6 +72,15 @@ pub fn stem_cache_root() -> Result<PathBuf> {
     Ok(root)
 }
 
+/// Absolute path to the HTDemucs ONNX model file.
+///
+/// On macOS: `~/Library/Application Support/io.PhraseDJ.PhraseDJ/models/htdemucs.onnx`
+pub fn model_path() -> Result<PathBuf> {
+    let dirs = ProjectDirs::from("io", "PhraseDJ", "PhraseDJ")
+        .ok_or_else(|| Error::Settings("cannot determine app-support directory".into()))?;
+    Ok(dirs.data_local_dir().join("models").join("htdemucs.onnx"))
+}
+
 // ---------------------------------------------------------------------------
 // Per-track directory
 // ---------------------------------------------------------------------------

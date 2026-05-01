@@ -80,8 +80,9 @@ bool Deck::load_stems(const std::string& path_main,
     auto dec_o = Decoder::open(path_o, sample_rate);
 
     if (!dec_v || !dec_d || !dec_b || !dec_o) {
-        // Fallback to normal load if any stem fails to open
-        return load(path_main, sample_rate);
+        // Do NOT silently fall back to normal load — the caller must know
+        // that stems failed so the UI can disable the stem faders.
+        return false;
     }
 
     state_.playing.store(false);

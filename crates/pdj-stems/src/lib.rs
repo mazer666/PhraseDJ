@@ -57,8 +57,9 @@ pub mod onnx;
 pub mod paths;
 pub mod queue;
 pub mod stitch;
+pub mod model_download;
 
 // Re-export the main entry points so callers only need to import from
 // `pdj_stems` directly.
-pub use queue::{StemService, StemStatus};
+pub use queue::{StemService, StemStatus, QueueJob};
 pub use paths::StemPaths;

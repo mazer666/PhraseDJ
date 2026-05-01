@@ -2,14 +2,23 @@
  * engineStore.ts — Zustand store for the audio engine state.
  *
  * Mirrors the Rust-side state via periodic polling of `deck_state`.
- * Phase 2 will replace polling with Tauri events for lower overhead, but
- * for Phase 1 a 60-Hz poll is plenty.
+ * Stem completion events from the Tauri backend trigger automatic
+ * hot-swap reloads so the user never needs to manually reload.
  */
 
 import { create } from "zustand";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { deckApi, mixerApi, type DeckState, type WaveformData } from "../lib/api";
 
 const POLL_INTERVAL_MS = 50; // 20 fps – plenty for transport indicators
+
+/** Payload from the Rust `forward_stem_events` bridge. */
+interface StemStatusEvent {
+  track_id: string;
+  status: "pending" | "running" | "cached" | "failed";
+  progress: number | null;
+  reason: string | null;
+}
 
 interface EngineStore {
   // Per-deck state.
@@ -17,6 +26,12 @@ interface EngineStore {
 
   // Waveform peak data per deck (null until loaded).
   waveforms: [WaveformData | null, WaveformData | null];
+
+  // Path last loaded per deck (for hot-swap reload after stem analysis).
+  loadedPaths: [string | null, string | null];
+
+  // Active stem analysis jobs: track_id -> { status, progress, reason }
+  stemJobs: Record<string, { status: string; progress: number; reason?: string }>;
 
   // Mixer state (kept locally; pushed to engine on change).
   faderA: number;
@@ -56,10 +71,13 @@ const blankState = (deck: number): DeckState => ({
 });
 
 let pollHandle: number | null = null;
+let stemUnlisten: UnlistenFn | null = null;
 
 export const useEngineStore = create<EngineStore>((set, get) => ({
   decks: [blankState(0), blankState(1)],
   waveforms: [null, null],
+  loadedPaths: [null, null],
+  stemJobs: {},
   faderA: 1.0,
   faderB: 1.0,
   stemGainsA: [1.0, 1.0, 1.0, 1.0],
@@ -78,21 +96,82 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
         set({ decks: [a, b] });
       } catch (e) {
         // Engine unavailable – leave state as-is.
-        // Logged once, not on every tick, to avoid console spam.
       }
     };
     pollHandle = window.setInterval(tick, POLL_INTERVAL_MS);
+
+    // Listen for stem-status events from the Rust backend.
+    if (stemUnlisten === null) {
+      listen<StemStatusEvent>("stem-status", (event) => {
+        const { track_id, status, progress, reason } = event.payload;
+        
+        set((s) => {
+          const nextJobs = { ...s.stemJobs };
+          if (status === "cached" || status === "failed") {
+            // Remove terminal jobs after a delay.
+            nextJobs[track_id] = { status, progress: 1.0, reason: reason ?? undefined };
+          } else {
+            // "pending", "running", or "model_downloading"
+            nextJobs[track_id] = { status, progress: progress ?? 0.0 };
+          }
+          return { stemJobs: nextJobs };
+        });
+
+        if (status === "cached") {
+          // Stems just became available — reload any deck that has
+          // this track loaded so stems are hot-swapped in.
+          const paths = get().loadedPaths;
+          for (const deck of [0, 1] as const) {
+            const p = paths[deck];
+            if (p) {
+              // Re-load triggers the Rust side to detect cached stems
+              // and use load_stems instead of load.
+              deckApi.load(deck, p).then(() => {
+                // Refresh waveform to show stem colours.
+                deckApi.waveform(deck).then((data) => {
+                  set((s) => {
+                    const next = [...s.waveforms] as [WaveformData | null, WaveformData | null];
+                    next[deck] = data;
+                    return { waveforms: next };
+                  });
+                }).catch(() => {});
+              }).catch(() => {});
+            }
+          }
+
+          // Clear the job from the UI after 5 seconds
+          setTimeout(() => {
+            set((s) => {
+              const nextJobs = { ...s.stemJobs };
+              delete nextJobs[track_id];
+              return { stemJobs: nextJobs };
+            });
+          }, 5000);
+        }
+      }).then((fn) => { stemUnlisten = fn; });
+    }
   },
+
 
   stopPolling: () => {
     if (pollHandle !== null) {
       window.clearInterval(pollHandle);
       pollHandle = null;
     }
+    if (stemUnlisten !== null) {
+      stemUnlisten();
+      stemUnlisten = null;
+    }
   },
 
   load: async (deck, path) => {
     await deckApi.load(deck, path);
+    // Remember the path so we can hot-swap stems later.
+    set((s) => {
+      const next = [...s.loadedPaths] as [string | null, string | null];
+      next[deck] = path;
+      return { loadedPaths: next };
+    });
     // Compute waveform peaks in the background after load.
     deckApi.waveform(deck).then((data) => {
       set((s) => {
@@ -141,3 +220,4 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
 
   setTempoRatio: (deck, ratio) => deckApi.setTempoRatio(deck, ratio),
 }));
+

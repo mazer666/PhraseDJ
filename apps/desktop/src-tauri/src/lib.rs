@@ -8,13 +8,26 @@ pub mod state;
 
 use std::path::PathBuf;
 
+use async_broadcast::Receiver;
 use directories::ProjectDirs;
+use pdj_core::types::TrackId;
 use pdj_engine_bridge::EngineConfig;
-use tauri::Manager;
-use tracing::error;
+use pdj_stems::StemStatus;
+use serde::Serialize;
+use tauri::{Emitter, Manager};
+use tracing::{error, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
 use crate::state::AppState;
+
+/// Payload emitted as a Tauri event when a stem job changes status.
+#[derive(Debug, Clone, Serialize)]
+struct StemEvent {
+    track_id: String,
+    status:   String,        // "pending" | "running" | "cached" | "failed"
+    progress: Option<f32>,   // only set when status == "running"
+    reason:   Option<String>, // only set when status == "failed"
+}
 
 /// Initialise logging and start the Tauri event loop.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -38,6 +51,11 @@ pub fn run() {
 
             match AppState::init(db_path, engine_config) {
                 Ok(state) => {
+                    // Start forwarding stem status events to the frontend.
+                    let rx = state.stems.subscribe();
+                    let handle = app.handle().clone();
+                    tokio::spawn(forward_stem_events(rx, handle));
+
                     app.manage(state);
                 }
                 Err(e) => {
@@ -84,4 +102,57 @@ fn app_support_path(file: &str) -> PathBuf {
     let dir = dirs.config_local_dir().to_path_buf();
     let _ = std::fs::create_dir_all(&dir);
     dir.join(file)
+}
+
+/// Background task that listens on the stem broadcast channel and
+/// emits Tauri events to all connected windows.
+///
+/// The React frontend listens for `"stem-status"` events and can
+/// hot-swap stems into a playing deck without a manual reload.
+async fn forward_stem_events(
+    mut rx: Receiver<(TrackId, StemStatus)>,
+    handle: tauri::AppHandle,
+) {
+    loop {
+        match rx.recv().await {
+            Ok((track_id, status)) => {
+                let event = match &status {
+                    StemStatus::Pending => StemEvent {
+                        track_id: track_id.to_string(),
+                        status:   "pending".into(),
+                        progress: None,
+                        reason:   None,
+                    },
+                    StemStatus::Running { progress } => StemEvent {
+                        track_id: track_id.to_string(),
+                        status:   "running".into(),
+                        progress: Some(*progress),
+                        reason:   None,
+                    },
+                    StemStatus::Cached { .. } => StemEvent {
+                        track_id: track_id.to_string(),
+                        status:   "cached".into(),
+                        progress: None,
+                        reason:   None,
+                    },
+                    StemStatus::Failed { reason } => StemEvent {
+                        track_id: track_id.to_string(),
+                        status:   "failed".into(),
+                        progress: None,
+                        reason:   Some(reason.clone()),
+                    },
+                };
+                if let Err(e) = handle.emit("stem-status", event) {
+                    warn!("Failed to emit stem-status event: {}", e);
+                }
+            }
+            Err(async_broadcast::RecvError::Closed) => {
+                tracing::info!("Stem status channel closed — stopping event forwarder");
+                break;
+            }
+            Err(async_broadcast::RecvError::Overflowed(_)) => {
+                // Missed some events, not critical — UI will catch up on next poll.
+            }
+        }
+    }
 }
