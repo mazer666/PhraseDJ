@@ -2,7 +2,6 @@
 ///
 /// Wires together the audio engine, the local library, and the Tauri
 /// command surface used by the React frontend.
-
 pub mod commands;
 pub mod state;
 

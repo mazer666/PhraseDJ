@@ -111,8 +111,7 @@ impl StemService {
         let (status_tx, _status_rx) = broadcast::<(TrackId, StemStatus)>(64);
 
         // Unbounded channel so enqueue() never blocks the caller.
-        let (job_tx, job_rx) =
-            tokio::sync::mpsc::unbounded_channel::<StemJob>();
+        let (job_tx, job_rx) = tokio::sync::mpsc::unbounded_channel::<StemJob>();
 
         let cache_root = stem_cache_root()?;
 
@@ -173,7 +172,10 @@ impl StemService {
         // Send to the worker.
         self.inner
             .job_tx
-            .send(StemJob { track_id, source_path })
+            .send(StemJob {
+                track_id,
+                source_path,
+            })
             .map_err(|_| Error::other("stem job channel closed unexpectedly"))?;
 
         Ok(())
@@ -247,10 +249,7 @@ impl StemService {
     ///
     /// `settings` is used for `max_parallel_jobs`.
     /// `cache_root` is the directory where stems are persisted.
-    pub fn start(
-        settings: pdj_core::StemsSettings,
-        cache_root: PathBuf,
-    ) -> Self {
+    pub fn start(settings: pdj_core::StemsSettings, cache_root: PathBuf) -> Self {
         let concurrency = compute_concurrency(if settings.max_parallel_jobs == 0 {
             None
         } else {
@@ -260,8 +259,7 @@ impl StemService {
 
         let (status_tx, _status_rx) = broadcast::<(TrackId, StemStatus)>(64);
 
-        let (job_tx, job_rx) =
-            tokio::sync::mpsc::unbounded_channel::<StemJob>();
+        let (job_tx, job_rx) = tokio::sync::mpsc::unbounded_channel::<StemJob>();
 
         let inner = Arc::new(ServiceInner {
             status_tx,
@@ -294,7 +292,7 @@ impl StemService {
         self.inner
             .job_tx
             .send(StemJob {
-                track_id:    job.track,
+                track_id: job.track,
                 source_path: job.path,
             })
             .map_err(|_| Error::other("stem job channel closed"))?;
@@ -369,26 +367,51 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
         Ok(p) => p,
         Err(e) => {
             error!(?track_id, error = %e, "cannot determine model path");
-            publish(&inner, track_id, StemStatus::Failed { reason: e.to_string() }).await;
+            publish(
+                &inner,
+                track_id,
+                StemStatus::Failed {
+                    reason: e.to_string(),
+                },
+            )
+            .await;
             return;
         }
     };
 
     if !crate::model_download::is_model_installed(&model_path) {
         info!(?track_id, "AI model missing — triggering download");
-        publish(&inner, track_id, StemStatus::ModelDownloading { progress: 0.0 }).await;
-        
+        publish(
+            &inner,
+            track_id,
+            StemStatus::ModelDownloading { progress: 0.0 },
+        )
+        .await;
+
         let inner_for_dl = Arc::clone(&inner);
         let dl_result = crate::model_download::download_model(&model_path, |progress| {
             let inner_for_dl = Arc::clone(&inner_for_dl);
             tokio::spawn(async move {
-                publish(&inner_for_dl, track_id, StemStatus::ModelDownloading { progress }).await;
+                publish(
+                    &inner_for_dl,
+                    track_id,
+                    StemStatus::ModelDownloading { progress },
+                )
+                .await;
             });
-        }).await;
+        })
+        .await;
 
         if let Err(e) = dl_result {
             error!(?track_id, error = %e, "AI model download failed");
-            publish(&inner, track_id, StemStatus::Failed { reason: format!("Model download failed: {}", e) }).await;
+            publish(
+                &inner,
+                track_id,
+                StemStatus::Failed {
+                    reason: format!("Model download failed: {}", e),
+                },
+            )
+            .await;
             return;
         }
     }
@@ -401,13 +424,18 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
     let cache_root = inner.cache_root.clone();
     let inner_for_callback = Arc::clone(&inner);
     let handle = tokio::runtime::Handle::current();
-    
+
     let result = tokio::task::spawn_blocking(move || {
         run_analysis(track_id, &job.source_path, &cache_root, |progress| {
             // Forward progress to the async broadcaster.
             let inner_for_callback = Arc::clone(&inner_for_callback);
             handle.spawn(async move {
-                publish(&inner_for_callback, track_id, StemStatus::Running { progress }).await;
+                publish(
+                    &inner_for_callback,
+                    track_id,
+                    StemStatus::Running { progress },
+                )
+                .await;
             });
         })
     })
@@ -426,7 +454,9 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
             publish(
                 &inner,
                 track_id,
-                StemStatus::Failed { reason: e.to_string() },
+                StemStatus::Failed {
+                    reason: e.to_string(),
+                },
             )
             .await;
         }
@@ -435,7 +465,9 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
             publish(
                 &inner,
                 track_id,
-                StemStatus::Failed { reason: join_err.to_string() },
+                StemStatus::Failed {
+                    reason: join_err.to_string(),
+                },
             )
             .await;
         }
@@ -451,18 +483,22 @@ fn run_analysis<F>(
     source_path: &std::path::Path,
     cache_root: &std::path::Path,
     mut on_progress: F,
-) -> Result<StemPaths> 
+) -> Result<StemPaths>
 where
     F: FnMut(f32),
 {
     // --- 1. Select inference backend (MLX or ONNX) -----------------------
     let backend = select_backend();
-    debug!(backend = backend.name(), ?track_id, "selected inference backend");
+    debug!(
+        backend = backend.name(),
+        ?track_id,
+        "selected inference backend"
+    );
 
     // --- 2. Load PCM from disk -------------------------------------------
     // Uses symphonia to decode the real audio file into memory.
     let audio = load_pcm(source_path)?;
-    let channels    = audio.channels;
+    let channels = audio.channels;
     let sample_rate = audio.sample_rate;
     let total_frames = audio.frame_count();
 
@@ -471,23 +507,23 @@ where
     // Segment size: 8 s × sample_rate frames.
     // Overlap:      1 s × sample_rate frames (half-Hann crossfade).
     let segment_frames = 8 * sample_rate as usize;
-    let overlap_frames =     sample_rate as usize;
-    let step_frames    = segment_frames - overlap_frames;
+    let overlap_frames = sample_rate as usize;
+    let step_frames = segment_frames - overlap_frames;
 
     let mut stitcher = Stitcher::new(channels, sample_rate, overlap_frames);
-    let mut offset   = 0usize;
+    let mut offset = 0usize;
     let mut segment_count = 0usize;
 
     // Estimate total segments for progress reporting.
     let total_segments = (total_frames + step_frames - 1) / step_frames;
 
     while offset < total_frames {
-        let end    = (offset + segment_frames).min(total_frames);
+        let end = (offset + segment_frames).min(total_frames);
         let s_start = offset * channels as usize;
-        let s_end   = end   * channels as usize;
+        let s_end = end * channels as usize;
 
         let segment_buf = PcmBuffer {
-            samples:     audio.samples[s_start..s_end].to_vec(),
+            samples: audio.samples[s_start..s_end].to_vec(),
             channels,
             sample_rate,
         };
@@ -495,17 +531,22 @@ where
         let result = backend.infer(InferenceRequest { audio: segment_buf })?;
         stitcher.add_segment(result.stems);
 
-        offset        += step_frames;
+        offset += step_frames;
         segment_count += 1;
 
         let progress = (segment_count as f32 / total_segments as f32).min(1.0);
         on_progress(progress);
 
-        debug!(?track_id, segment = segment_count, progress, "segment processed");
+        debug!(
+            ?track_id,
+            segment = segment_count,
+            progress,
+            "segment processed"
+        );
     }
 
     // --- 4. Stitch and write to disk -------------------------------------
-    let stems      = stitcher.finalise();
+    let stems = stitcher.finalise();
     let stem_paths = stem_paths_for(cache_root, track_id);
     write_stems_to_disk(stems, &stem_paths)?;
 
@@ -531,7 +572,9 @@ fn load_pcm(path: &std::path::Path) -> Result<PcmBuffer> {
         .map_err(|e| Error::other(format!("Failed to probe format: {}", e)))?;
 
     let mut format = probed.format;
-    let track = format.default_track().ok_or_else(|| Error::other("No default track"))?;
+    let track = format
+        .default_track()
+        .ok_or_else(|| Error::other("No default track"))?;
 
     let dec_opts: symphonia::core::codecs::DecoderOptions = Default::default();
     let mut decoder = symphonia::default::get_codecs()
@@ -540,7 +583,11 @@ fn load_pcm(path: &std::path::Path) -> Result<PcmBuffer> {
 
     let track_id = track.id;
     let sample_rate = track.codec_params.sample_rate.unwrap_or(44_100);
-    let channels = track.codec_params.channels.map(|c| c.count() as u16).unwrap_or(2);
+    let channels = track
+        .codec_params
+        .channels
+        .map(|c| c.count() as u16)
+        .unwrap_or(2);
 
     let mut all_samples = Vec::new();
 
@@ -645,11 +692,8 @@ mod tests {
         create_test_wav(&wav_path);
 
         let service = StemService::new(Some(1)).await.expect("StemService::new");
-        let track   = TrackId::new();
-        service
-            .enqueue(track, wav_path)
-            .await
-            .expect("enqueue");
+        let track = TrackId::new();
+        service.enqueue(track, wav_path).await.expect("enqueue");
 
         // The ONNX model won't be available in tests, so we expect a failure.
         // This validates the full pipeline up to inference.
@@ -658,15 +702,17 @@ mod tests {
         match result {
             Ok(paths) => {
                 assert!(paths.vocals.exists(), "vocals stem should be on disk");
-                assert!(paths.drums.exists(),  "drums stem should be on disk");
-                assert!(paths.bass.exists(),   "bass stem should be on disk");
-                assert!(paths.other.exists(),  "other stem should be on disk");
+                assert!(paths.drums.exists(), "drums stem should be on disk");
+                assert!(paths.bass.exists(), "bass stem should be on disk");
+                assert!(paths.other.exists(), "other stem should be on disk");
             }
             Err(e) => {
                 // Expected when ONNX model is not installed.
                 let msg = e.to_string();
                 assert!(
-                    msg.contains("Model missing") || msg.contains("model not found") || msg.contains("ONNX"),
+                    msg.contains("Model missing")
+                        || msg.contains("model not found")
+                        || msg.contains("ONNX"),
                     "unexpected error: {msg}"
                 );
             }
@@ -680,10 +726,13 @@ mod tests {
         create_test_wav(&wav_path);
 
         let service = StemService::new(Some(1)).await.expect("StemService::new");
-        let track   = TrackId::new();
+        let track = TrackId::new();
 
         // First enqueue — triggers analysis (may fail without model, that's OK).
-        service.enqueue(track, wav_path.clone()).await.expect("enqueue 1");
+        service
+            .enqueue(track, wav_path.clone())
+            .await
+            .expect("enqueue 1");
         let _ = service.wait(track).await;
 
         // If stems were cached, a second enqueue should be idempotent.

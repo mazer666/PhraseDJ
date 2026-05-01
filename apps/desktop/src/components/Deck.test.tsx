@@ -18,6 +18,7 @@ const blankDeck = (deck: number): DeckState => ({
   playing: false,
   position: 0,
   bpm: 0,
+  tempo_ratio: 1.0,
 });
 
 function setDeckState(side: "A" | "B", patch: Partial<DeckState>) {

@@ -81,15 +81,14 @@ impl Stitcher {
                 // Blend: the last `overlap_samples` in `acc` are cross-faded
                 // with the first `overlap_samples` of the new segment.
                 let blend_len = self.overlap_samples.min(acc.len()).min(new_samples.len());
-                let acc_len   = acc.len();
-                let fade      = half_hann_fade(blend_len);
+                let acc_len = acc.len();
+                let fade = half_hann_fade(blend_len);
 
                 for i in 0..blend_len {
                     // fade_out for acc, fade_in for new.
-                    let alpha      = fade[i]; // 0 → 1 (new signal weight)
-                    let acc_index  = acc_len - blend_len + i;
-                    acc[acc_index] = acc[acc_index] * (1.0 - alpha)
-                        + new_samples[i] * alpha;
+                    let alpha = fade[i]; // 0 → 1 (new signal weight)
+                    let acc_index = acc_len - blend_len + i;
+                    acc[acc_index] = acc[acc_index] * (1.0 - alpha) + new_samples[i] * alpha;
                 }
 
                 // Append the non-overlapping tail of the new segment.
@@ -105,7 +104,7 @@ impl Stitcher {
         let [v, d, b, o] = self.accumulated;
         let make_buf = |samples: Vec<f32>| PcmBuffer {
             samples,
-            channels:    self.channels,
+            channels: self.channels,
             sample_rate: self.sample_rate,
         };
         [make_buf(v), make_buf(d), make_buf(b), make_buf(o)]
@@ -151,10 +150,10 @@ fn write_wav_stem(buf: &PcmBuffer, path: &Path) -> Result<()> {
     }
 
     let spec = hound::WavSpec {
-        channels:        buf.channels,
-        sample_rate:     buf.sample_rate,
+        channels: buf.channels,
+        sample_rate: buf.sample_rate,
         bits_per_sample: 16,
-        sample_format:   hound::SampleFormat::Int,
+        sample_format: hound::SampleFormat::Int,
     };
 
     let mut writer = hound::WavWriter::create(path, spec)
@@ -162,8 +161,8 @@ fn write_wav_stem(buf: &PcmBuffer, path: &Path) -> Result<()> {
 
     for &sample in &buf.samples {
         // Clamp to [-1, 1] before converting to i16 to avoid wrap-around.
-        let clamped  = sample.clamp(-1.0, 1.0);
-        let as_i16   = (clamped * i16::MAX as f32) as i16;
+        let clamped = sample.clamp(-1.0, 1.0);
+        let as_i16 = (clamped * i16::MAX as f32) as i16;
         writer
             .write_sample(as_i16)
             .map_err(|e| pdj_core::Error::other(format!("WAV sample write: {e}")))?;
@@ -210,7 +209,7 @@ mod tests {
 
     fn make_stem(value: f32, frames: usize, channels: u16) -> PcmBuffer {
         PcmBuffer {
-            samples:     vec![value; frames * channels as usize],
+            samples: vec![value; frames * channels as usize],
             channels,
             sample_rate: 44_100,
         }
@@ -268,12 +267,12 @@ mod tests {
 
     #[test]
     fn write_stems_to_disk_creates_files() {
-        let dir   = tempfile::tempdir().expect("tempdir");
+        let dir = tempfile::tempdir().expect("tempdir");
         let paths = StemPaths {
             vocals: dir.path().join("vocals.flac"),
-            drums:  dir.path().join("drums.flac"),
-            bass:   dir.path().join("bass.flac"),
-            other:  dir.path().join("other.flac"),
+            drums: dir.path().join("drums.flac"),
+            bass: dir.path().join("bass.flac"),
+            other: dir.path().join("other.flac"),
         };
         let stems = make_four_stems(0.0, 64);
         write_stems_to_disk(stems, &paths).expect("write");

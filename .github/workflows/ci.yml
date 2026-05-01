@@ -111,6 +111,14 @@ jobs:
         with:
           cmake-version: "3.28"
 
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev libsndfile1-dev
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install portaudio libsndfile
+
       - name: Configure
         working-directory: native/audio
         # Note: GoogleTest is fetched from the internet during configure.

@@ -42,7 +42,7 @@ pub struct DeckState {
 #[tauri::command]
 pub fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<(), String> {
     let p = PathBuf::from(&path);
-    
+
     // Auto-import to get TrackId (or find existing)
     let track_id = {
         let lib = state.library.lock().map_err(|e| e.to_string())?;
@@ -55,11 +55,11 @@ pub fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<
     // the queue handles idempotency internally.
     if let Err(e) = state.stems.submit(pdj_stems::QueueJob {
         track: track_id,
-        path:  p.clone(),
+        path: p.clone(),
     }) {
         tracing::warn!("Failed to queue stem separation: {}", e);
     }
-    
+
     // Check if stems exist
     let has_stems = {
         if let Ok(root) = pdj_stems::paths::stem_cache_root() {
@@ -73,12 +73,17 @@ pub fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<
             None
         }
     };
-    
+
     let guard = state.engine.lock().map_err(|e| e.to_string())?;
     let engine = guard.as_ref().ok_or("audio engine not available")?;
-    
+
     if let Some(stems) = has_stems {
-        let arr = [&stems.vocals.as_path(), &stems.drums.as_path(), &stems.bass.as_path(), &stems.other.as_path()];
+        let arr = [
+            &stems.vocals.as_path(),
+            &stems.drums.as_path(),
+            &stems.bass.as_path(),
+            &stems.other.as_path(),
+        ];
         match engine.load_stems(deck, &p, &arr) {
             Ok(()) => return Ok(()),
             Err(e) => {
@@ -181,7 +186,7 @@ pub async fn deck_waveform(
     let peaks = engine
         .compute_waveform(deck, bins)
         .map_err(|e| e.to_string())?;
-    
+
     // Try to get stem peaks too, but don't fail if they aren't loaded.
     let stem_peaks = if let Ok(sp) = engine.compute_stem_waveforms(deck, bins) {
         Some(vec![sp.vocals, sp.drums, sp.bass, sp.other])

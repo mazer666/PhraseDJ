@@ -1,12 +1,11 @@
+use std::fs::File;
+use std::io::Write;
 /// model_download.rs — Automatic downloader for AI model files.
 ///
 /// HTDemucs ONNX models are large (~80 MB) and are not shipped in the
 /// binary.  This module fetches them from a reliable mirror (e.g. Hugging Face)
 /// and verifies their integrity.
-
 use std::path::Path;
-use std::fs::File;
-use std::io::Write;
 
 use futures_util::StreamExt;
 use pdj_core::{Error, Result};
@@ -58,5 +57,9 @@ where
 
 /// Check if the model exists at the expected path.
 pub fn is_model_installed(path: &Path) -> bool {
-    path.exists() && path.metadata().map(|m| m.len() > 1_000_000).unwrap_or(false)
+    path.exists()
+        && path
+            .metadata()
+            .map(|m| m.len() > 1_000_000)
+            .unwrap_or(false)
 }

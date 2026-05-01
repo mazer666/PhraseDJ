@@ -15,17 +15,8 @@ allow = [
     "CC0-1.0",
     "Zlib",
 ]
-# Deny anything copyleft-incompatible (GPL-2.0 would create issues).
-deny = [
-    "GPL-2.0",
-    "AGPL-3.0",
-]
-# Warn on unknown, don't error yet (some crates have non-standard fields).
-unlicensed = "warn"
-copyleft = "warn"
 
 [advisories]
-# Deny crates with known security vulnerabilities.
-vulnerability = "deny"
+# unmaintained crates are silently skipped; yanked versions are denied.
 unmaintained = "none"
 yanked = "deny"

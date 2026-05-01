@@ -7,7 +7,7 @@ fn bench_control_latency(c: &mut Criterion) {
         buffer_size: 128,
         channel_count: 2,
     };
-    
+
     // It's possible the engine fails to start in CI (no audio device),
     // but the engine stub works even if the device fails.
     let engine = Engine::new(config).unwrap_or_else(|_| {

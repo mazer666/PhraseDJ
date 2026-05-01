@@ -1,3 +1,6 @@
+use ndarray::Array3;
+use ort::{GraphOptimizationLevel, Session};
+use pdj_core::{Error, Result};
 /// ONNX Runtime backend for stem separation.
 ///
 /// # Why ONNX?
@@ -20,9 +23,6 @@
 ///
 /// See `specs/03-ai-stems.md §2` for model details.
 use std::sync::Mutex;
-use pdj_core::{Error, Result};
-use ort::{GraphOptimizationLevel, Session};
-use ndarray::Array3;
 
 use crate::backend::{InferenceRequest, InferenceResult, PcmBuffer, StemBackend};
 
@@ -48,20 +48,26 @@ impl OnnxBackend {
             session: Mutex::new(None),
         }
     }
-    
+
     fn get_or_load_session(&self) -> Result<std::sync::MutexGuard<'_, Option<Session>>> {
-        let mut guard = self.session.lock().map_err(|e| Error::Settings(e.to_string()))?;
+        let mut guard = self
+            .session
+            .lock()
+            .map_err(|e| Error::Settings(e.to_string()))?;
         if guard.is_none() {
             let model_path = dirs::data_local_dir()
                 .unwrap_or_default()
                 .join("PhraseDJ/models/htdemucs.onnx");
-                
+
             if !model_path.exists() {
                 // If model doesn't exist, we fallback to returning an error which
                 // could trigger a stub or gracefully fail.
-                return Err(Error::Settings(format!("ONNX model not found at {}", model_path.display())));
+                return Err(Error::Settings(format!(
+                    "ONNX model not found at {}",
+                    model_path.display()
+                )));
             }
-            
+
             let session = Session::builder()
                 .map_err(|e| Error::Settings(e.to_string()))?
                 .with_optimization_level(GraphOptimizationLevel::Level3)
@@ -70,7 +76,7 @@ impl OnnxBackend {
                 .map_err(|e| Error::Settings(e.to_string()))?
                 .commit_from_file(model_path)
                 .map_err(|e| Error::Settings(e.to_string()))?;
-                
+
             *guard = Some(session);
         }
         Ok(guard)
@@ -99,7 +105,7 @@ impl StemBackend for OnnxBackend {
     /// real ORT session inference.
     fn infer(&self, request: InferenceRequest) -> Result<InferenceResult> {
         tracing::debug!(
-            frames  = request.audio.frame_count(),
+            frames = request.audio.frame_count(),
             backend = "onnx",
             "Running ONNX inference",
         );
@@ -129,12 +135,15 @@ impl StemBackend for OnnxBackend {
             .map_err(|e| Error::other(format!("Shape error: {}", e)))?;
 
         let inputs = ort::inputs![input_tensor].map_err(|e| Error::other(e.to_string()))?;
-        let outputs = session.run(inputs).map_err(|e| Error::other(e.to_string()))?;
+        let outputs = session
+            .run(inputs)
+            .map_err(|e| Error::other(e.to_string()))?;
 
         // Extract [1, 4, channels, frames]
-        let out_tensor = outputs[0].try_extract_tensor::<f32>()
+        let out_tensor = outputs[0]
+            .try_extract_tensor::<f32>()
             .map_err(|e| Error::other(e.to_string()))?;
-            
+
         // We know the shape should be [1, 4, channels, frames]
         // But let's safely iterate and re-interleave
         // out_tensor acts as an ArrayViewD
@@ -180,7 +189,7 @@ mod tests {
     fn make_request(frames: usize, channels: u16) -> InferenceRequest {
         InferenceRequest {
             audio: PcmBuffer {
-                samples:     vec![0.25_f32; frames * channels as usize],
+                samples: vec![0.25_f32; frames * channels as usize],
                 channels,
                 sample_rate: 44_100,
             },

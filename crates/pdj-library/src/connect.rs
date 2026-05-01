@@ -11,9 +11,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use thiserror::Error;
 use tracing::{debug, info};
 
-use crate::schema::{
-    self, AnalysisState, StemsState, Track, CURRENT_VERSION, SCHEMA_V1,
-};
+use crate::schema::{self, AnalysisState, StemsState, Track, CURRENT_VERSION, SCHEMA_V1};
 
 /// Library-specific errors.  Wrapped into `pdj_core::Error::Database`.
 #[derive(Debug, Error)]
@@ -80,7 +78,9 @@ impl Library {
     /// Run schema migrations up to `CURRENT_VERSION`.
     fn migrate(&mut self) -> Result<()> {
         // Always create v1 baseline if missing (idempotent).
-        self.conn.execute_batch(SCHEMA_V1).map_err(LibraryError::Sqlite)?;
+        self.conn
+            .execute_batch(SCHEMA_V1)
+            .map_err(LibraryError::Sqlite)?;
 
         // Read the current schema version.
         let v: Option<i64> = self
@@ -93,8 +93,10 @@ impl Library {
             None => {
                 // First run — record version.
                 self.conn
-                    .execute("INSERT INTO schema_version (version) VALUES (?)",
-                             params![CURRENT_VERSION])
+                    .execute(
+                        "INSERT INTO schema_version (version) VALUES (?)",
+                        params![CURRENT_VERSION],
+                    )
                     .map_err(LibraryError::Sqlite)?;
             }
             Some(v) if v > CURRENT_VERSION => {
@@ -147,30 +149,35 @@ impl Library {
     /// Fetch one track by id.
     pub fn get_track(&self, id: TrackId) -> Result<Track> {
         let id_s = id.to_string();
-        let track = self.conn.query_row(
-            "SELECT id, path, rel_path, title, artist, album,
+        let track = self
+            .conn
+            .query_row(
+                "SELECT id, path, rel_path, title, artist, album,
                     duration_ms, bpm, key,
                     imported_at, analyzed_at,
                     analysis_state, stems_state
              FROM tracks WHERE id = ?",
-            params![id_s],
-            row_to_track,
-        )
-        .optional()
-        .map_err(LibraryError::Sqlite)?
-        .ok_or_else(|| Error::Database(format!("track not found: {id}")))?;
+                params![id_s],
+                row_to_track,
+            )
+            .optional()
+            .map_err(LibraryError::Sqlite)?
+            .ok_or_else(|| Error::Database(format!("track not found: {id}")))?;
         Ok(track)
     }
 
     /// List the most recent N tracks.
     pub fn recent(&self, limit: u32) -> Result<Vec<Track>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, path, rel_path, title, artist, album,
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT id, path, rel_path, title, artist, album,
                     duration_ms, bpm, key,
                     imported_at, analyzed_at,
                     analysis_state, stems_state
              FROM tracks ORDER BY imported_at DESC LIMIT ?",
-        ).map_err(LibraryError::Sqlite)?;
+            )
+            .map_err(LibraryError::Sqlite)?;
         let rows = stmt
             .query_map(params![limit], row_to_track)
             .map_err(LibraryError::Sqlite)?;
@@ -214,24 +221,30 @@ impl Library {
 
     /// Delete a track from the library (does not remove the audio file).
     pub fn delete(&self, id: TrackId) -> Result<()> {
-        self.conn.execute(
-            "DELETE FROM tracks WHERE id = ?", params![id.to_string()])
+        self.conn
+            .execute("DELETE FROM tracks WHERE id = ?", params![id.to_string()])
             .map_err(LibraryError::Sqlite)?;
         Ok(())
     }
 
     /// Total track count.
     pub fn count(&self) -> Result<i64> {
-        let n: i64 = self.conn.query_row("SELECT COUNT(*) FROM tracks", [], |r| r.get(0))
+        let n: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM tracks", [], |r| r.get(0))
             .map_err(LibraryError::Sqlite)?;
         Ok(n)
     }
 
     /// Path the library was opened from.
-    pub fn path(&self) -> &Path { &self.path }
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
 
     /// Borrow the underlying connection (used by sibling modules).
-    pub(crate) fn conn(&self) -> &Connection { &self.conn }
+    pub(crate) fn conn(&self) -> &Connection {
+        &self.conn
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -240,8 +253,9 @@ impl Library {
 
 fn row_to_track(row: &rusqlite::Row<'_>) -> rusqlite::Result<Track> {
     let id_s: String = row.get(0)?;
-    let id = TrackId::parse(&id_s).map_err(|e|
-        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e)))?;
+    let id = TrackId::parse(&id_s).map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+    })?;
     Ok(Track {
         id,
         path: row.get(1)?,

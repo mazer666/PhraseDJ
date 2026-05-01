@@ -52,16 +52,23 @@ pub fn search(lib: &Library, q: &Query) -> Result<Vec<Track>> {
     sql.push_str(" LIMIT ?");
     args.push((q.limit.unwrap_or(200) as i64).into());
 
-    let mut stmt = lib.conn().prepare(&sql)
+    let mut stmt = lib
+        .conn()
+        .prepare(&sql)
         .map_err(|e| pdj_core::Error::Database(e.to_string()))?;
 
     // Convert Vec<Value> into a slice of &dyn ToSql via params_from_iter.
     let rows = stmt
-        .query_map(rusqlite::params_from_iter(args.iter()), |row| {
-            -> rusqlite::Result<Track> {
+        .query_map(
+            rusqlite::params_from_iter(args.iter()),
+            |row| -> rusqlite::Result<Track> {
                 let id_s: String = row.get(0)?;
                 let id = pdj_core::TrackId::parse(&id_s).map_err(|e| {
-                    rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+                    rusqlite::Error::FromSqlConversionFailure(
+                        0,
+                        rusqlite::types::Type::Text,
+                        Box::new(e),
+                    )
                 })?;
                 Ok(Track {
                     id,
@@ -78,8 +85,8 @@ pub fn search(lib: &Library, q: &Query) -> Result<Vec<Track>> {
                     analysis_state: AnalysisState::parse(&row.get::<_, String>(11)?),
                     stems_state: StemsState::parse(&row.get::<_, String>(12)?),
                 })
-            }
-        })
+            },
+        )
         .map_err(|e| pdj_core::Error::Database(e.to_string()))?;
 
     let mut out = Vec::new();
@@ -104,14 +111,14 @@ mod tests {
         let lib = Library::open(dir.path().join("lib.db")).unwrap();
         let mk = |title: &str, artist: &str, bpm: f32| {
             let mut t = Track::new_from_path(format!("/music/{title}.flac"));
-            t.title  = Some(title.into());
+            t.title = Some(title.into());
             t.artist = Some(artist.into());
-            t.bpm    = Some(bpm);
+            t.bpm = Some(bpm);
             lib.insert_track(&t).unwrap();
         };
-        mk("Strobe",      "Deadmau5", 128.0);
-        mk("Levels",      "Avicii",   126.0);
-        mk("Ghosts",      "Deadmau5", 105.0);
+        mk("Strobe", "Deadmau5", 128.0);
+        mk("Levels", "Avicii", 126.0);
+        mk("Ghosts", "Deadmau5", 105.0);
         // Keep tempdir alive for the scope of the test:
         std::mem::forget(dir);
         lib
@@ -127,7 +134,10 @@ mod tests {
     #[test]
     fn text_query_filters_by_artist() {
         let lib = lib_with_three_tracks();
-        let q = Query { text: Some("Deadmau5".into()), ..Default::default() };
+        let q = Query {
+            text: Some("Deadmau5".into()),
+            ..Default::default()
+        };
         let res = search(&lib, &q).unwrap();
         assert_eq!(res.len(), 2);
     }

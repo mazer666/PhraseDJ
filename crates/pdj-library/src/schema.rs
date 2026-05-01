@@ -77,9 +77,9 @@ impl AnalysisState {
     pub fn parse(s: &str) -> Self {
         match s {
             "beatgrid" => AnalysisState::Beatgrid,
-            "full"     => AnalysisState::Full,
-            "failed"   => AnalysisState::Failed,
-            _          => AnalysisState::Raw,
+            "full" => AnalysisState::Full,
+            "failed" => AnalysisState::Failed,
+            _ => AnalysisState::Raw,
         }
     }
 }
@@ -106,9 +106,9 @@ impl StemsState {
     pub fn parse(s: &str) -> Self {
         match s {
             "running" => StemsState::Running,
-            "cached"  => StemsState::Cached,
-            "failed"  => StemsState::Failed,
-            _         => StemsState::Pending,
+            "cached" => StemsState::Cached,
+            "failed" => StemsState::Failed,
+            _ => StemsState::Pending,
         }
     }
 }

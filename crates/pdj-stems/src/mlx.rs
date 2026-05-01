@@ -53,22 +53,28 @@ impl MlxBackend {
             model_loaded: Mutex::new(false),
         }
     }
-    
+
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     fn get_or_load_model(&self) -> Result<()> {
-        let mut loaded = self.model_loaded.lock().map_err(|e| Error::Settings(e.to_string()))?;
+        let mut loaded = self
+            .model_loaded
+            .lock()
+            .map_err(|e| Error::Settings(e.to_string()))?;
         if !*loaded {
             let model_path = dirs::data_local_dir()
                 .unwrap_or_default()
                 .join("PhraseDJ/models/htdemucs.safetensors");
-                
+
             if !model_path.exists() {
-                return Err(Error::Settings(format!("MLX model not found at {}", model_path.display())));
+                return Err(Error::Settings(format!(
+                    "MLX model not found at {}",
+                    model_path.display()
+                )));
             }
-            
+
             // In a full implementation, we'd load the safetensors and instantiate the NN layers here.
             // mlx_rs::nn::load_weights(&model, &model_path)...
-            
+
             *loaded = true;
         }
         Ok(())
@@ -87,7 +93,7 @@ impl StemBackend for MlxBackend {
     }
 
     fn is_available(&self) -> bool {
-        // HTDemucs graph is not yet ported to MLX Rust. 
+        // HTDemucs graph is not yet ported to MLX Rust.
         // We return false here to force the engine to use the fully functional ONNX backend
         // instead of a stub.
         false
@@ -95,7 +101,9 @@ impl StemBackend for MlxBackend {
 
     /// Separate one segment into four stems using HTDemucs on MLX.
     fn infer(&self, _request: InferenceRequest) -> Result<InferenceResult> {
-        Err(Error::other("MLX inference is not yet implemented for HTDemucs. Use ONNX."))
+        Err(Error::other(
+            "MLX inference is not yet implemented for HTDemucs. Use ONNX.",
+        ))
     }
 }
 
@@ -111,7 +119,7 @@ mod tests {
     fn make_request(frames: usize, channels: u16) -> InferenceRequest {
         InferenceRequest {
             audio: PcmBuffer {
-                samples:     vec![0.5_f32; frames * channels as usize],
+                samples: vec![0.5_f32; frames * channels as usize],
                 channels,
                 sample_rate: 44_100,
             },

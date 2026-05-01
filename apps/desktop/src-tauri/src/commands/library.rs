@@ -13,11 +13,11 @@ pub fn library_import_file(path: String, state: State<'_, AppState>) -> Result<S
     let lib = state.library.lock().map_err(|e| e.to_string())?;
     let outcome =
         pdj_library::import_file(&lib, PathBuf::from(&path)).map_err(|e| e.to_string())?;
-        
+
     // Enqueue for background stem separation.
     if let Err(e) = state.stems.submit(pdj_stems::QueueJob {
         track: outcome.id(),
-        path:  PathBuf::from(path),
+        path: PathBuf::from(path),
     }) {
         tracing::warn!("Failed to queue stem separation: {}", e);
     }

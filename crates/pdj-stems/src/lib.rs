@@ -53,13 +53,13 @@
 /// | `paths`   | Cache directory layout helpers                           |
 pub mod backend;
 pub mod mlx;
+pub mod model_download;
 pub mod onnx;
 pub mod paths;
 pub mod queue;
 pub mod stitch;
-pub mod model_download;
 
 // Re-export the main entry points so callers only need to import from
 // `pdj_stems` directly.
-pub use queue::{StemService, StemStatus, QueueJob};
 pub use paths::StemPaths;
+pub use queue::{QueueJob, StemService, StemStatus};

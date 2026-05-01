@@ -45,10 +45,7 @@ pub struct StemPaths {
 impl StemPaths {
     /// Return `true` if all four FLAC files exist on disk.
     pub fn all_exist(&self) -> bool {
-        self.vocals.exists()
-            && self.drums.exists()
-            && self.bass.exists()
-            && self.other.exists()
+        self.vocals.exists() && self.drums.exists() && self.bass.exists() && self.other.exists()
     }
 }
 
@@ -104,9 +101,9 @@ pub fn stem_paths_for(root: &Path, track: TrackId) -> StemPaths {
 
     StemPaths {
         vocals: stem_path("vocals"),
-        drums:  stem_path("drums"),
-        bass:   stem_path("bass"),
-        other:  stem_path("other"),
+        drums: stem_path("drums"),
+        bass: stem_path("bass"),
+        other: stem_path("other"),
     }
 }
 
@@ -159,7 +156,7 @@ mod tests {
 
     #[test]
     fn stem_paths_for_uses_expected_filenames() {
-        let root  = PathBuf::from("/tmp/stems");
+        let root = PathBuf::from("/tmp/stems");
         let track = TrackId::new();
         let paths = stem_paths_for(&root, track);
 
@@ -172,7 +169,7 @@ mod tests {
 
     #[test]
     fn all_exist_returns_false_when_files_are_missing() {
-        let root  = PathBuf::from("/tmp/stems");
+        let root = PathBuf::from("/tmp/stems");
         let track = TrackId::new();
         let paths = stem_paths_for(&root, track);
         // Files don't actually exist — should report false.

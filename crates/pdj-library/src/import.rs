@@ -20,8 +20,7 @@ use crate::schema::Track;
 
 /// File extensions PhraseDJ understands at import time.
 const AUDIO_EXTENSIONS: &[&str] = &[
-    "wav", "wave", "flac", "aiff", "aif",
-    "mp3", "m4a", "aac", "ogg", "opus",
+    "wav", "wave", "flac", "aiff", "aif", "mp3", "m4a", "aac", "ogg", "opus",
 ];
 
 /// Outcome of scanning a folder.
@@ -89,8 +88,7 @@ pub fn import_file(lib: &Library, path: impl AsRef<Path>) -> Result<ImportOutcom
         .map_err(|e| pdj_core::Error::Database(e.to_string()))?;
 
     if let Some(s) = existing {
-        let id = TrackId::parse(&s)
-            .map_err(|e| pdj_core::Error::Database(e.to_string()))?;
+        let id = TrackId::parse(&s).map_err(|e| pdj_core::Error::Database(e.to_string()))?;
         return Ok(ImportOutcome::Existing(id));
     }
 
@@ -184,7 +182,10 @@ mod tests {
             File::create(&p).unwrap().write_all(b"").unwrap();
         }
         // And one non-audio file.
-        File::create(music.join("readme.txt")).unwrap().write_all(b"").unwrap();
+        File::create(music.join("readme.txt"))
+            .unwrap()
+            .write_all(b"")
+            .unwrap();
         let lib = Library::open(dir.path().join("library.db")).unwrap();
         (dir, music, lib)
     }
