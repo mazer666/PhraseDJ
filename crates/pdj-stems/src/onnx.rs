@@ -1,5 +1,4 @@
-use directories::ProjectDirs;
-use ndarray::Array3;
+use ndarray::{Array3, Ix4};
 use ort::session::builder::GraphOptimizationLevel;
 use ort::session::Session;
 use ort::value::Value;
@@ -58,9 +57,7 @@ impl OnnxBackend {
             .lock()
             .map_err(|e| Error::Settings(e.to_string()))?;
         if guard.is_none() {
-            let model_path = ProjectDirs::from("io", "PhraseDJ", "PhraseDJ")
-                .map(|d| d.data_local_dir().join("models/htdemucs.onnx"))
-                .unwrap_or_default();
+            let model_path = crate::paths::model_path()?;
 
             if !model_path.exists() {
                 // If model doesn't exist, we fallback to returning an error which
@@ -71,13 +68,13 @@ impl OnnxBackend {
                 )));
             }
 
-            let session = Session::builder()
-                .map_err(|e| Error::other(format!("Session builder error: {}", e)))?
-                .with_optimization_level(GraphOptimizationLevel::Level3)
-                .map_err(|e| Error::other(format!("Opt level error: {}", e)))?
-                .with_intra_threads(4)
-                .map_err(|e| Error::other(format!("Threads error: {}", e)))?
-                .commit_from_file(model_path)
+            let mut builder = Session::builder()
+                .map_err(|e| Error::other(format!("Session builder error: {}", e)))?;
+            builder.with_optimization_level(GraphOptimizationLevel::Level3)
+                .map_err(|e| Error::other(format!("Opt level error: {}", e)))?;
+            builder.with_intra_threads(4)
+                .map_err(|e| Error::other(format!("Threads error: {}", e)))?;
+            let session = builder.commit_from_file(model_path)
                 .map_err(|e| Error::other(format!("Model load error: {}", e)))?;
 
             *guard = Some(session);
@@ -138,23 +135,24 @@ impl StemBackend for OnnxBackend {
             .map_err(|e| Error::other(format!("Shape error: {}", e)))?;
 
         // ort 2.0 requires explicit Value creation from ndarray.
-        let input_value = Value::from_array(session.allocator(), &input_tensor)
+        let input_value = Value::from_array(input_tensor)
             .map_err(|e| Error::other(format!("Failed to create input tensor: {}", e)))?;
 
-        let inputs = ort::inputs![input_value]
-            .map_err(|e| Error::other(format!("Failed to prepare inputs: {}", e)))?;
         let outputs = session
-            .run(inputs)
+            .run(ort::inputs![
+                "input" => input_value,
+            ]?)
             .map_err(|e| Error::other(format!("Inference failed: {}", e)))?;
 
-        // ort 2.0 Session::run returns a Result<SessionOutputs, Error>.
-        // SessionOutputs implements Index<usize> and returns an SessionOutputValue.
-
         // Extract [1, 4, channels, frames]
-        let out_tensor = outputs[0]
+        let out_value = &outputs[0];
+        let out_tensor = out_value
             .try_extract_tensor::<f32>()
             .map_err(|e| Error::other(format!("Extraction failed: {}", e)))?;
-        let out_view = out_tensor.view();
+        let out_view = out_tensor
+            .view()
+            .to_dimensionality::<Ix4>()
+            .map_err(|e| Error::other(format!("Output dimension mismatch: {}", e)))?;
 
         // We know the shape should be [1, 4, channels, frames]
         // But let's safely iterate and re-interleave

@@ -30,7 +30,7 @@ hound = { workspace = true }
 symphonia = { version = "0.5", features = ["all"] }
 
 # ONNX Runtime bindings for cross-platform inference fallback.
-ort = "2.0.0-rc.12"
+ort = { version = "2.0.0-rc.12", features = ["ndarray"] }
 ndarray = "0.15"
 
 # HTTP client for model downloading.
