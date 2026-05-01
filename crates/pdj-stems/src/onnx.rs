@@ -197,7 +197,6 @@ impl StemBackend for OnnxBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::InferenceRequest;
 
     fn make_request(frames: usize, channels: u16) -> InferenceRequest {
         InferenceRequest {

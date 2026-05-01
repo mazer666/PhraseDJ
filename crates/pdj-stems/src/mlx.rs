@@ -115,7 +115,7 @@ impl StemBackend for MlxBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::{InferenceRequest, PcmBuffer};
+    use crate::backend::PcmBuffer;
 
     fn make_request(frames: usize, channels: u16) -> InferenceRequest {
         InferenceRequest {
