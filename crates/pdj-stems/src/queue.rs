@@ -101,7 +101,7 @@ impl StemService {
     /// `max_parallel_jobs`: maximum concurrent analysis jobs.
     /// Pass `0` to use `num_cpus::get_physical() - 1` (leaving one core
     /// free for audio playback).
-    pub async fn new(max_parallel_jobs: Option<usize>) -> Result<Arc<Self>> {
+    pub async fn new(max_parallel_jobs: Option<usize>) -> Result<Self> {
         let concurrency = compute_concurrency(max_parallel_jobs);
         info!(concurrency, "StemService starting");
 
@@ -129,7 +129,7 @@ impl StemService {
             run_worker(inner_clone, job_rx).await;
         });
 
-        Ok(Arc::new(Self { inner }))
+        Ok(Self { inner })
     }
 
     /// Submit a track for stem analysis.

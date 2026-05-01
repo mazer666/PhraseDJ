@@ -17,7 +17,8 @@
 /// use pdj_stems::{StemService, StemStatus};
 /// use pdj_core::types::TrackId;
 ///
-/// # tokio_test::block_on(async {
+/// # #[tokio::main]
+/// # async fn main() {
 /// let service = StemService::new(None).await.unwrap();
 /// let track   = TrackId::new();
 /// service.enqueue(track, "/path/to/track.flac".into()).await.unwrap();
@@ -38,7 +39,7 @@
 ///         }
 ///     }
 /// }
-/// # });
+/// # }
 /// ```
 ///
 /// # Module layout

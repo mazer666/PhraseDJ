@@ -178,15 +178,11 @@ impl StemBackend for OnnxBackend {
         }
 
         tracing::info!("ONNX inference completed for {} frames", frames);
+        let stems: [PcmBuffer; 4] = stems.try_into().map_err(|v: Vec<PcmBuffer>| {
+            Error::other(format!("Expected 4 stems, got {}", v.len()))
+        })?;
 
-        Ok(InferenceResult {
-            stems: [
-                stems[0].clone(),
-                stems[1].clone(),
-                stems[2].clone(),
-                stems[3].clone(),
-            ],
-        })
+        Ok(InferenceResult { stems })
     }
 }
 

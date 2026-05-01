@@ -1,10 +1,11 @@
+//! Automatic downloader for AI model files.
+//!
+//! HTDemucs ONNX models are large (~80 MB) and are not shipped in the
+//! binary.  This module fetches them from a reliable mirror (e.g. Hugging Face)
+//! and verifies their integrity.
+
 use std::fs::File;
 use std::io::Write;
-/// model_download.rs — Automatic downloader for AI model files.
-///
-/// HTDemucs ONNX models are large (~80 MB) and are not shipped in the
-/// binary.  This module fetches them from a reliable mirror (e.g. Hugging Face)
-/// and verifies their integrity.
 use std::path::Path;
 
 use futures_util::StreamExt;

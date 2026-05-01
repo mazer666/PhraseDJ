@@ -27,11 +27,6 @@ use crate::backend::{InferenceRequest, InferenceResult, StemBackend};
 ///
 /// We check `std::env::consts::ARCH` at compile time.  On non-macOS builds
 /// this is always false, so the ONNX backend takes over.
-fn is_apple_silicon() -> bool {
-    // cfg!() is evaluated at compile time, so the false branch is
-    // dead-code-eliminated on non-macOS targets.
-    cfg!(target_os = "macos") && cfg!(target_arch = "aarch64")
-}
 
 // ---------------------------------------------------------------------------
 // MlxBackend
