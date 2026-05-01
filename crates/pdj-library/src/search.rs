@@ -7,7 +7,7 @@ use pdj_core::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::connect::Library;
-use crate::schema::{AnalysisState, StemsState, Track};
+use crate::schema::Track;
 
 /// A search query.
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
