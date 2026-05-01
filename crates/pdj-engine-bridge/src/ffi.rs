@@ -93,6 +93,16 @@ extern "C" {
         engine: *mut PdjEngine,
         deck_index: u32,
     ) -> c_float;
+
+    // Waveform analysis
+    pub fn pdj_engine_compute_waveform(
+        engine: *mut PdjEngine,
+        deck_index: u32,
+        num_bins: u32,
+        out_min: *mut c_float,
+        out_max: *mut c_float,
+    ) -> PdjResult;
+    pub fn pdj_engine_total_frames(engine: *mut PdjEngine, deck_index: u32) -> u64;
 }
 
 // Make `*mut PdjEngine` Send + Sync so we can hold it inside Arc<Mutex<>>.

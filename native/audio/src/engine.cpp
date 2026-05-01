@@ -14,15 +14,19 @@
 
 #include "bpm.hpp"
 #include "deck.hpp"
+#include "decoder.hpp"
 #include "mixer.hpp"
 #include "portaudio_backend.hpp"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <cstring>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // PdjEngine struct — the opaque handle returned to callers
@@ -42,6 +46,9 @@ struct PdjEngine {
 
     // BPM result per deck (set after analysis; read by the UI).
     std::array<pdj::BeatgridResult, 2> beatgrids;
+
+    // File path last loaded per deck — used for waveform peak computation.
+    std::array<std::string, 2> deck_paths;
 
     // Mutex protects beatgrids and non-RT control operations.
     std::mutex control_mutex;
@@ -112,8 +119,9 @@ PdjResult pdj_engine_load(PdjEngine*  engine,
     if (!file_path) return PdjResult_InvalidArg;
     if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
 
-    const bool ok = engine->decks[deck_index]->load(
-        std::string(file_path), engine->config.sample_rate);
+    const std::string path(file_path);
+    const bool ok = engine->decks[deck_index]->load(path, engine->config.sample_rate);
+    if (ok) engine->deck_paths[deck_index] = path;
     return ok ? PdjResult_Ok : PdjResult_Io;
 }
 
@@ -236,7 +244,73 @@ void pdj_engine_set_tempo_ratio(PdjEngine* engine,
 
 float pdj_engine_get_tempo_ratio(PdjEngine* engine, uint32_t deck_index) {
     if (!valid_deck(engine, deck_index)) return 1.0f;
-    // state_.pitch is an atomic float; access it via the public setter's path.
-    // We expose a dedicated getter to avoid reaching into private members.
     return engine->decks[deck_index]->get_pitch();
+}
+
+// ---------------------------------------------------------------------------
+// Waveform analysis
+// ---------------------------------------------------------------------------
+
+PdjResult pdj_engine_compute_waveform(PdjEngine* engine,
+                                       uint32_t   deck_index,
+                                       uint32_t   num_bins,
+                                       float*     out_min,
+                                       float*     out_max) {
+    if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
+    if (!out_min || !out_max || num_bins == 0) return PdjResult_InvalidArg;
+
+    const std::string& path = engine->deck_paths[deck_index];
+    if (path.empty()) return PdjResult_NotReady;
+
+    auto dec = pdj::Decoder::open(path, engine->config.sample_rate);
+    if (!dec) return PdjResult_Io;
+
+    const uint64_t total_frames = dec->info().total_frames;
+    if (total_frames == 0) return PdjResult_Internal;
+
+    // Pre-fill output with silence so partially-decoded bins are valid.
+    for (uint32_t i = 0; i < num_bins; ++i) {
+        out_min[i] = 0.0f;
+        out_max[i] = 0.0f;
+    }
+
+    const double frames_per_bin =
+        static_cast<double>(total_frames) / static_cast<double>(num_bins);
+
+    constexpr uint32_t CHUNK = 4096;
+    std::vector<float> buf(CHUNK * 2);
+    uint64_t frames_done = 0;
+
+    while (true) {
+        uint32_t got = 0;
+        const auto res = dec->read_frames(buf.data(), CHUNK, got);
+        if (got == 0) break;
+
+        for (uint32_t f = 0; f < got; ++f) {
+            const uint64_t fi  = frames_done + f;
+            const uint32_t bin = static_cast<uint32_t>(
+                static_cast<double>(fi) / frames_per_bin);
+            if (bin >= num_bins) break;
+
+            // Mono RMS-ish peak: average absolute value of L and R.
+            const float l = std::abs(buf[f * 2]);
+            const float r = std::abs(buf[f * 2 + 1]);
+            const float peak = (l + r) * 0.5f;
+
+            if (peak > out_max[bin]) out_max[bin] = peak;
+            out_min[bin] = -out_max[bin];  // symmetric display
+        }
+
+        frames_done += got;
+        if (res == pdj::DecodeResult::EndOfFile) break;
+        if (res != pdj::DecodeResult::Ok) break;
+    }
+
+    return PdjResult_Ok;
+}
+
+uint64_t pdj_engine_total_frames(PdjEngine* engine, uint32_t deck_index) {
+    if (!valid_deck(engine, deck_index)) return 0;
+    const auto* info = engine->decks[deck_index]->audio_info();
+    return info ? info->total_frames : 0;
 }

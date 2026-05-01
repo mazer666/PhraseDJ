@@ -1,13 +1,14 @@
 /**
  * Deck.tsx — One playback deck UI.
  *
- * Phase 1: loaded track, BPM, transport buttons, tempo sync/nudge,
- * and a channel fader.  Waveform rendering arrives later in Phase 1.
+ * Phase 1: loaded track, BPM, overview waveform, transport buttons,
+ * tempo sync/nudge, and a channel fader.
  */
 
 import { open } from "@tauri-apps/plugin-dialog";
 
 import { useEngineStore } from "../store/engineStore";
+import { WaveformCanvas } from "./WaveformCanvas";
 
 export interface DeckProps {
   side: "A" | "B";
@@ -16,6 +17,7 @@ export interface DeckProps {
 export function Deck({ side }: DeckProps): React.JSX.Element {
   const deckIndex = side === "A" ? 0 : 1 as 0 | 1;
   const state      = useEngineStore((s) => s.decks[deckIndex]);
+  const waveform   = useEngineStore((s) => s.waveforms[deckIndex]);
   const fader      = useEngineStore((s) => (side === "A" ? s.faderA : s.faderB));
   const load       = useEngineStore((s) => s.load);
   const play       = useEngineStore((s) => s.play);
@@ -64,6 +66,13 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
         </button>
         <div className="deck-position">{positionLabel}</div>
       </div>
+
+      {/* Overview waveform — always visible, shows placeholder when not loaded */}
+      <WaveformCanvas
+        waveform={waveform}
+        position={state.position}
+        accentColor={side === "A" ? "#e05a2b" : "#2bb3e0"}
+      />
 
       <div className="deck-transport">
         {state.playing ? (

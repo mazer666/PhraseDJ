@@ -168,6 +168,33 @@ void pdj_engine_set_tempo_ratio(PdjEngine* engine,
  */
 float pdj_engine_get_tempo_ratio(PdjEngine* engine, uint32_t deck_index);
 
+/* -------------------------------------------------------------------------
+   Waveform analysis  (run on a background thread, not in the audio callback)
+------------------------------------------------------------------------- */
+
+/**
+ * Compute waveform peak data for a loaded deck.
+ *
+ * Does a fresh decode pass over the file and fills two caller-allocated
+ * arrays of `num_bins` floats each:
+ *   `out_min[i]` — minimum (negative) amplitude in bin i.
+ *   `out_max[i]` — maximum (positive) amplitude in bin i.
+ *
+ * Blocking call — run from a worker thread.
+ * Returns PdjResult_NotReady if no file has been loaded on the deck yet.
+ */
+PdjResult pdj_engine_compute_waveform(PdjEngine* engine,
+                                       uint32_t   deck_index,
+                                       uint32_t   num_bins,
+                                       float*     out_min,
+                                       float*     out_max);
+
+/**
+ * Return the total number of frames in the currently-loaded file.
+ * Returns 0 if no file is loaded.
+ */
+uint64_t pdj_engine_total_frames(PdjEngine* engine, uint32_t deck_index);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

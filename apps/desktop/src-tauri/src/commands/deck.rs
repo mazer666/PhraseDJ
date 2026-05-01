@@ -11,6 +11,19 @@ use tauri::State;
 
 use crate::state::AppState;
 
+/// Waveform peak data sent to the UI for canvas rendering.
+#[derive(Debug, Serialize)]
+pub struct WaveformData {
+    /// Number of bins (length of both peak arrays).
+    pub num_bins:      u32,
+    /// Minimum (negative) amplitude per bin.
+    pub peaks_min:     Vec<f32>,
+    /// Maximum (positive) amplitude per bin.
+    pub peaks_max:     Vec<f32>,
+    /// Total frames in the track at the engine's sample rate.
+    pub total_frames:  u64,
+}
+
 /// One-shot snapshot of a deck's state.  Sent on every UI poll.
 #[derive(Debug, Serialize)]
 pub struct DeckState {
@@ -109,4 +122,25 @@ pub fn deck_nudge_tempo(deck: u32, delta: f32,
     let engine = guard.as_ref().ok_or("audio engine not available")?;
     engine.nudge_tempo(deck, delta);
     Ok(())
+}
+
+/// Compute and return waveform peak data for a loaded deck.
+///
+/// `bins` controls how many vertical bars the canvas will draw.
+/// 800 is a good default for a full-width overview waveform.
+/// Blocking — Tauri runs this on a thread pool, not the main thread.
+#[tauri::command]
+pub async fn deck_waveform(deck: u32, bins: u32,
+                            state: State<'_, AppState>) -> Result<WaveformData, String>
+{
+    let guard = state.engine.lock().map_err(|e| e.to_string())?;
+    let engine = guard.as_ref().ok_or("audio engine not available")?;
+    let total_frames = engine.total_frames(deck);
+    let peaks = engine.compute_waveform(deck, bins).map_err(|e| e.to_string())?;
+    Ok(WaveformData {
+        num_bins:     bins,
+        peaks_min:    peaks.peaks_min,
+        peaks_max:    peaks.peaks_max,
+        total_frames,
+    })
 }

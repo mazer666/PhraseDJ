@@ -18,10 +18,22 @@ export interface AppStatus {
   library_count: number;
 }
 
+export interface UiSettings {
+  sample_rate:     number;
+  buffer_size:     number;
+  pitch_range_pct: number;
+  music_root:      string;
+  online_lookup:   boolean;
+  target_fps:      number;
+  update_check:    boolean;
+}
+
 export const app = {
-  version:    () => invoke<string>("app_version"),
-  status:     () => invoke<AppStatus>("app_status"),
-  keymapLoad: () => invoke<Record<string, string>>("keymap_load"),
+  version:       () => invoke<string>("app_version"),
+  status:        () => invoke<AppStatus>("app_status"),
+  keymapLoad:    () => invoke<Record<string, string>>("keymap_load"),
+  settingsLoad:  () => invoke<UiSettings>("settings_load"),
+  settingsSave:  (settings: UiSettings) => invoke<void>("settings_save", { settings }),
 };
 
 // ---------------------------------------------------------------------------
@@ -38,6 +50,13 @@ export interface DeckState {
   tempo_ratio: number;
 }
 
+export interface WaveformData {
+  num_bins:     number;
+  peaks_min:    number[];
+  peaks_max:    number[];
+  total_frames: number;
+}
+
 export const deckApi = {
   load:   (deck: number, path: string) =>
     invoke<void>("deck_load", { deck, path }),
@@ -51,6 +70,9 @@ export const deckApi = {
   sync:   (deck: number) => invoke<void>("deck_sync", { deck }),
   nudgeTempo: (deck: number, delta: number) =>
     invoke<void>("deck_nudge_tempo", { deck, delta }),
+  /** Fetch waveform peak data for canvas rendering. bins ≈ canvas width. */
+  waveform: (deck: number, bins = 800) =>
+    invoke<WaveformData>("deck_waveform", { deck, bins }),
 };
 
 // ---------------------------------------------------------------------------

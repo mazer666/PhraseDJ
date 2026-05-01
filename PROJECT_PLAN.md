@@ -33,13 +33,13 @@
 shows up as an empty Tauri window.
 
 - [x] Specs and plans (this state)
-- [ ] Repo layout (`apps/`, `crates/`, `native/`, `ml/`, `config/`)
-- [ ] Tauri 2 skeleton with React/TS/Vite
-- [ ] Cargo workspace with a `pdj-core` stub
-- [ ] CMake skeleton for `native/audio`
+- [x] Repo layout (`apps/`, `crates/`, `native/`, `ml/`, `config/`)
+- [x] Tauri 2 skeleton with React/TS/Vite
+- [x] Cargo workspace with a `pdj-core` stub
+- [x] CMake skeleton for `native/audio`
 - [ ] CI on GitHub Actions: `cargo test`, `pnpm test`, `ctest`, lint
-- [ ] `config/defaults.toml` + loader in `pdj-core`
-- [ ] CONTRIBUTING.md, ISSUE/PR templates
+- [x] `config/defaults.toml` + loader in `pdj-core`
+- [x] CONTRIBUTING.md, ISSUE/PR templates
 
 **Outcome:** an empty window that launches on macOS.
 
@@ -50,18 +50,18 @@ shows up as an empty Tauri window.
 **Goal:** play two tracks simultaneously, crossfader and volume work, keyboard
 control runs.
 
-- [ ] CoreAudio integration via a PortAudio wrapper in C++
-- [ ] FFI bridge `pdj-engine-bridge` (Rust ↔ C++)
-- [ ] Decoders for MP3, FLAC, WAV, AAC (libsndfile + lightweight FFmpeg)
-- [ ] Lock-free ring buffer for the audio callback
-- [ ] Two deck instances (Play/Pause/Cue/Seek)
-- [ ] Crossfader, channel faders, master output
-- [ ] Waveform renderer (Metal-accelerated via `wgpu`)
-- [ ] Beatgrid detection (BPM via aubio or in-house)
-- [ ] Tempo sync between decks
-- [ ] Keyboard mapping driven by `keymap.toml`
-- [ ] Local library: SQLite schema, drag & drop import, folder scan
-- [ ] Settings UI (with reset-to-default)
+- [x] CoreAudio integration via a PortAudio wrapper in C++
+- [x] FFI bridge `pdj-engine-bridge` (Rust ↔ C++)
+- [x] Decoders for MP3, FLAC, WAV, AAC (libsndfile + lightweight FFmpeg)
+- [x] Lock-free ring buffer for the audio callback
+- [x] Two deck instances (Play/Pause/Cue/Seek)
+- [x] Crossfader, channel faders, master output
+- [x] Waveform renderer (canvas-based overview; `wgpu` upgrade planned Phase 2)
+- [x] Beatgrid detection (BPM via spectral auto-correlation)
+- [x] Tempo sync between decks (vinyl-style pitch ratio + nudge)
+- [x] Keyboard mapping driven by `keymap.toml` (with user-override merging)
+- [x] Local library: SQLite schema, drag & drop import, folder scan
+- [x] Settings UI (with reset-to-default)
 - [ ] Latency benchmark as a CI check
 
 **Milestone 1 (M8):** "I can load two tracks from my local library, play

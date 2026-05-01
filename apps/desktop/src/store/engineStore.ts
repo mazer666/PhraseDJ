@@ -7,13 +7,16 @@
  */
 
 import { create } from "zustand";
-import { deckApi, mixerApi, type DeckState } from "../lib/api";
+import { deckApi, mixerApi, type DeckState, type WaveformData } from "../lib/api";
 
 const POLL_INTERVAL_MS = 50; // 20 fps – plenty for transport indicators
 
 interface EngineStore {
   // Per-deck state.
   decks: [DeckState, DeckState];
+
+  // Waveform peak data per deck (null until loaded).
+  waveforms: [WaveformData | null, WaveformData | null];
 
   // Mixer state (kept locally; pushed to engine on change).
   faderA: number;
@@ -53,6 +56,7 @@ let pollHandle: number | null = null;
 
 export const useEngineStore = create<EngineStore>((set, get) => ({
   decks: [blankState(0), blankState(1)],
+  waveforms: [null, null],
   faderA: 1.0,
   faderB: 1.0,
   crossfader: 0.5,
@@ -84,6 +88,14 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
 
   load: async (deck, path) => {
     await deckApi.load(deck, path);
+    // Compute waveform peaks in the background after load.
+    deckApi.waveform(deck).then((data) => {
+      set((s) => {
+        const next: [WaveformData | null, WaveformData | null] = [...s.waveforms] as [WaveformData | null, WaveformData | null];
+        next[deck] = data;
+        return { waveforms: next };
+      });
+    }).catch(() => { /* waveform unavailable — no-op */ });
   },
   play:  (deck) => deckApi.play(deck),
   pause: (deck) => deckApi.pause(deck),

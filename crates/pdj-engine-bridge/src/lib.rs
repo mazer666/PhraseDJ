@@ -56,6 +56,16 @@ impl From<BridgeError> for CoreError {
 /// Convenience alias.
 pub type Result<T> = std::result::Result<T, BridgeError>;
 
+/// Waveform peak data returned by `Engine::compute_waveform`.
+///
+/// Both vecs have the same length (`num_bins`).
+/// `peaks_min[i]` ≤ 0, `peaks_max[i]` ≥ 0.
+#[derive(Debug, Clone)]
+pub struct WaveformPeaks {
+    pub peaks_min: Vec<f32>,
+    pub peaks_max: Vec<f32>,
+}
+
 /// Configuration for engine creation.
 #[derive(Debug, Clone, Copy)]
 pub struct EngineConfig {
@@ -221,6 +231,45 @@ impl Engine {
         let current = self.get_tempo_ratio(deck);
         let next = (current + delta).clamp(0.5, 2.0);
         self.set_tempo_ratio(deck, next);
+    }
+
+    // ----- Waveform analysis -----------------------------------------------
+
+    /// Compute waveform peak data for a loaded deck.
+    ///
+    /// Does a fresh decode pass over the file.  Blocking — call from a
+    /// worker thread, never from the audio callback or the UI thread.
+    ///
+    /// Returns `(peaks_min, peaks_max)` where each Vec has `num_bins`
+    /// elements.  `peaks_min[i]` is ≤ 0 and `peaks_max[i]` is ≥ 0.
+    pub fn compute_waveform(
+        &self,
+        deck: u32,
+        num_bins: u32,
+    ) -> Result<WaveformPeaks> {
+        check_deck(deck)?;
+        if num_bins == 0 { return Err(BridgeError::InvalidArg); }
+
+        let mut peaks_min = vec![0.0f32; num_bins as usize];
+        let mut peaks_max = vec![0.0f32; num_bins as usize];
+
+        let res = unsafe {
+            ffi::pdj_engine_compute_waveform(
+                self.handle,
+                deck,
+                num_bins,
+                peaks_min.as_mut_ptr(),
+                peaks_max.as_mut_ptr(),
+            )
+        };
+        check_result(res)?;
+        Ok(WaveformPeaks { peaks_min, peaks_max })
+    }
+
+    /// Total frames in the currently-loaded file (0 if no file loaded).
+    pub fn total_frames(&self, deck: u32) -> u64 {
+        if check_deck(deck).is_err() { return 0; }
+        unsafe { ffi::pdj_engine_total_frames(self.handle, deck) }
     }
 
     /// Synchronise `deck`'s tempo to the opposite deck's BPM.
