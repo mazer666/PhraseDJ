@@ -70,6 +70,7 @@ bool Deck::load_stems(const std::string& path_main,
                       const std::string& path_b,
                       const std::string& path_o,
                       uint32_t sample_rate) {
+    (void)path_main;
     prefetch_run_.store(false);
     wake_prefetch();
     if (prefetch_thread_.joinable()) prefetch_thread_.join();

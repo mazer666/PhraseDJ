@@ -79,8 +79,6 @@ describe("engineStore – polling", () => {
     mockInvoke.mockResolvedValue(fakeDeckState(0));
     useEngineStore.getState().startPolling();
     await vi.advanceTimersByTimeAsync(60);
-    const _callsAfterStart = mockInvoke.mock.calls.length;
-
     useEngineStore.getState().stopPolling();
     mockInvoke.mockReset();
 
