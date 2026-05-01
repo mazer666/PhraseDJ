@@ -59,34 +59,7 @@ pub fn search(lib: &Library, q: &Query) -> Result<Vec<Track>> {
 
     // Convert Vec<Value> into a slice of &dyn ToSql via params_from_iter.
     let rows = stmt
-        .query_map(
-            rusqlite::params_from_iter(args.iter()),
-            |row| -> rusqlite::Result<Track> {
-                let id_s: String = row.get(0)?;
-                let id = pdj_core::TrackId::parse(&id_s).map_err(|e| {
-                    rusqlite::Error::FromSqlConversionFailure(
-                        0,
-                        rusqlite::types::Type::Text,
-                        Box::new(e),
-                    )
-                })?;
-                Ok(Track {
-                    id,
-                    path: row.get(1)?,
-                    rel_path: row.get(2)?,
-                    title: row.get(3)?,
-                    artist: row.get(4)?,
-                    album: row.get(5)?,
-                    duration_ms: row.get(6)?,
-                    bpm: row.get(7)?,
-                    key: row.get(8)?,
-                    imported_at: row.get(9)?,
-                    analyzed_at: row.get(10)?,
-                    analysis_state: AnalysisState::parse(&row.get::<_, String>(11)?),
-                    stems_state: StemsState::parse(&row.get::<_, String>(12)?),
-                })
-            },
-        )
+        .query_map(rusqlite::params_from_iter(args.iter()), Track::from_row)
         .map_err(|e| pdj_core::Error::Database(e.to_string()))?;
 
     let mut out = Vec::new();
@@ -106,7 +79,7 @@ mod tests {
     use crate::connect::Library;
     use crate::schema::Track;
 
-    fn lib_with_three_tracks() -> Library {
+    fn lib_with_three_tracks() -> (tempfile::TempDir, Library) {
         let dir = tempfile::tempdir().unwrap();
         let lib = Library::open(dir.path().join("lib.db")).unwrap();
         let mk = |title: &str, artist: &str, bpm: f32| {
@@ -119,21 +92,19 @@ mod tests {
         mk("Strobe", "Deadmau5", 128.0);
         mk("Levels", "Avicii", 126.0);
         mk("Ghosts", "Deadmau5", 105.0);
-        // Keep tempdir alive for the scope of the test:
-        std::mem::forget(dir);
-        lib
+        (dir, lib)
     }
 
     #[test]
     fn empty_query_returns_all() {
-        let lib = lib_with_three_tracks();
+        let (_d, lib) = lib_with_three_tracks();
         let res = search(&lib, &Query::default()).unwrap();
         assert_eq!(res.len(), 3);
     }
 
     #[test]
     fn text_query_filters_by_artist() {
-        let lib = lib_with_three_tracks();
+        let (_d, lib) = lib_with_three_tracks();
         let q = Query {
             text: Some("Deadmau5".into()),
             ..Default::default()
@@ -144,7 +115,7 @@ mod tests {
 
     #[test]
     fn bpm_range_filters() {
-        let lib = lib_with_three_tracks();
+        let (_d, lib) = lib_with_three_tracks();
         let q = Query {
             bpm_min: Some(120.0),
             bpm_max: Some(127.0),

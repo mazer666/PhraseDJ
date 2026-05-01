@@ -158,7 +158,7 @@ impl Library {
                     analysis_state, stems_state
              FROM tracks WHERE id = ?",
                 params![id_s],
-                row_to_track,
+                Track::from_row,
             )
             .optional()
             .map_err(LibraryError::Sqlite)?
@@ -179,7 +179,7 @@ impl Library {
             )
             .map_err(LibraryError::Sqlite)?;
         let rows = stmt
-            .query_map(params![limit], row_to_track)
+            .query_map(params![limit], Track::from_row)
             .map_err(LibraryError::Sqlite)?;
         let mut out = Vec::new();
         for r in rows {
@@ -251,27 +251,6 @@ impl Library {
 // Row mapper
 // ---------------------------------------------------------------------------
 
-fn row_to_track(row: &rusqlite::Row<'_>) -> rusqlite::Result<Track> {
-    let id_s: String = row.get(0)?;
-    let id = TrackId::parse(&id_s).map_err(|e| {
-        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
-    })?;
-    Ok(Track {
-        id,
-        path: row.get(1)?,
-        rel_path: row.get(2)?,
-        title: row.get(3)?,
-        artist: row.get(4)?,
-        album: row.get(5)?,
-        duration_ms: row.get(6)?,
-        bpm: row.get(7)?,
-        key: row.get(8)?,
-        imported_at: row.get(9)?,
-        analyzed_at: row.get(10)?,
-        analysis_state: AnalysisState::parse(&row.get::<_, String>(11)?),
-        stems_state: StemsState::parse(&row.get::<_, String>(12)?),
-    })
-}
 
 // ---------------------------------------------------------------------------
 // Tests

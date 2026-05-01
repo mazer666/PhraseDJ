@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn second_scan_marks_duplicates() {
         let (_d, music, lib) = temp_lib_with_files();
-        let _ = scan_folder(&lib, &music).unwrap();
+        let _report = scan_folder(&lib, &music).unwrap();
         let r2 = scan_folder(&lib, &music).unwrap();
         assert_eq!(r2.added, 0);
         assert_eq!(r2.duplicate, 3);

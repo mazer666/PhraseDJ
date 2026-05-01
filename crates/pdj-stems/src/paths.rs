@@ -96,8 +96,10 @@ pub fn track_stem_dir(root: &Path, track: TrackId) -> Result<PathBuf> {
 /// Does **not** check whether the files exist — call `StemPaths::all_exist`
 /// for that.
 pub fn stem_paths_for(root: &Path, track: TrackId) -> StemPaths {
-    // stem_path is a small helper to avoid repeating the same pattern four times.
-    let stem_path = |name: &str| root.join(track.to_string()).join(format!("{name}.flac"));
+    let track_id_s = track.to_string();
+    let track_dir = root.join(track_id_s);
+
+    let stem_path = |name: &str| track_dir.join(format!("{name}.flac"));
 
     StemPaths {
         vocals: stem_path("vocals"),

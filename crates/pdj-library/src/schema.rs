@@ -150,6 +150,33 @@ impl Track {
             stems_state: StemsState::Pending,
         }
     }
+
+    /// Map a rusqlite Row to a Track.
+    ///
+    /// Assumes the SELECT query includes columns in the standard order:
+    /// id, path, rel_path, title, artist, album, duration_ms, bpm, key,
+    /// imported_at, analyzed_at, analysis_state, stems_state.
+    pub fn from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Self> {
+        let id_s: String = row.get(0)?;
+        let id = TrackId::parse(&id_s).map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+        })?;
+        Ok(Track {
+            id,
+            path: row.get(1)?,
+            rel_path: row.get(2)?,
+            title: row.get(3)?,
+            artist: row.get(4)?,
+            album: row.get(5)?,
+            duration_ms: row.get(6)?,
+            bpm: row.get(7)?,
+            key: row.get(8)?,
+            imported_at: row.get(9)?,
+            analyzed_at: row.get(10)?,
+            analysis_state: AnalysisState::parse(&row.get::<_, String>(11)?),
+            stems_state: StemsState::parse(&row.get::<_, String>(12)?),
+        })
+    }
 }
 
 /// Current Unix time in milliseconds.
