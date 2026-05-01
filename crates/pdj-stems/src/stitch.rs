@@ -187,13 +187,13 @@ fn write_wav_stem(buf: &PcmBuffer, path: &Path) -> Result<()> {
 /// Hann is chosen over linear because it avoids a 3 dB amplitude boost at
 /// the centre of the crossfade.
 fn half_hann_fade(len: usize) -> Vec<f32> {
-    if len == 0 {
-        return Vec::new();
+    if len <= 1 {
+        return vec![1.0; len];
     }
     (0..len)
         .map(|i| {
             // Rising half-Hann: 0.5 * (1 - cos(π * i / (len - 1)))
-            let phase = std::f32::consts::PI * i as f32 / (len.saturating_sub(1)) as f32;
+            let phase = std::f32::consts::PI * i as f32 / (len - 1) as f32;
             0.5 * (1.0 - phase.cos())
         })
         .collect()

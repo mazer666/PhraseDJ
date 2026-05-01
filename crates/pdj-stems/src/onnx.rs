@@ -46,7 +46,7 @@ impl OnnxBackend {
     /// is in place.
     pub fn new() -> Self {
         // Initialize ort environment (thread-safe, idempotent).
-        let _ = ort::init().with_name("PhraseDJ").commit();
+        let _ = ort::init();
         Self {
             session: Mutex::new(None),
         }
@@ -72,13 +72,13 @@ impl OnnxBackend {
             }
 
             let session = Session::builder()
-                .map_err(|e| Error::Settings(e.to_string()))?
+                .map_err(|e| Error::other(format!("Session builder error: {}", e)))?
                 .with_optimization_level(GraphOptimizationLevel::Level3)
-                .map_err(|e| Error::Settings(e.to_string()))?
+                .map_err(|e| Error::other(format!("Opt level error: {}", e)))?
                 .with_intra_threads(4)
-                .map_err(|e| Error::Settings(e.to_string()))?
+                .map_err(|e| Error::other(format!("Threads error: {}", e)))?
                 .commit_from_file(model_path)
-                .map_err(|e| Error::Settings(e.to_string()))?;
+                .map_err(|e| Error::other(format!("Model load error: {}", e)))?;
 
             *guard = Some(session);
         }
@@ -137,12 +137,14 @@ impl StemBackend for OnnxBackend {
         let input_tensor = Array3::from_shape_vec((1, channels, frames), deinterleaved)
             .map_err(|e| Error::other(format!("Shape error: {}", e)))?;
 
-        // ort 2.0 requires explicit Value creation from ndarray if trait bounds aren't met automatically.
+        // ort 2.0 requires explicit Value creation from ndarray.
         let input_value = Value::from_array(session.allocator(), &input_tensor)
             .map_err(|e| Error::other(format!("Failed to create input tensor: {}", e)))?;
 
+        let inputs = ort::inputs![input_value]
+            .map_err(|e| Error::other(format!("Failed to prepare inputs: {}", e)))?;
         let outputs = session
-            .run(ort::inputs![input_value])
+            .run(inputs)
             .map_err(|e| Error::other(format!("Inference failed: {}", e)))?;
 
         // ort 2.0 Session::run returns a Result<SessionOutputs, Error>.
@@ -151,7 +153,8 @@ impl StemBackend for OnnxBackend {
         // Extract [1, 4, channels, frames]
         let out_tensor = outputs[0]
             .try_extract_tensor::<f32>()
-            .map_err(|e| Error::other(e.to_string()))?;
+            .map_err(|e| Error::other(format!("Extraction failed: {}", e)))?;
+        let out_view = out_tensor.view();
 
         // We know the shape should be [1, 4, channels, frames]
         // But let's safely iterate and re-interleave
@@ -162,7 +165,7 @@ impl StemBackend for OnnxBackend {
             for c in 0..channels {
                 for f in 0..frames {
                     // Indexing into [batch, stem, channel, frame] -> [0, stem_idx, c, f]
-                    let val = out_tensor[[0, stem_idx, c, f]];
+                    let val = out_view[[0, stem_idx, c, f]];
                     interleaved[f * channels + c] = val;
                 }
             }
