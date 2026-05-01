@@ -23,11 +23,6 @@ use crate::backend::{InferenceRequest, InferenceResult, StemBackend};
 // Platform detection
 // ---------------------------------------------------------------------------
 
-/// Return `true` if we are running on an Apple Silicon CPU.
-///
-/// We check `std::env::consts::ARCH` at compile time.  On non-macOS builds
-/// this is always false, so the ONNX backend takes over.
-
 // ---------------------------------------------------------------------------
 // MlxBackend
 // ---------------------------------------------------------------------------

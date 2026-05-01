@@ -1,4 +1,4 @@
-use ndarray::{Array3, Ix4};
+use ndarray::{Array3, ArrayViewD, Ix4};
 use ort::session::builder::GraphOptimizationLevel;
 use ort::session::Session;
 use ort::value::Value;
@@ -68,15 +68,12 @@ impl OnnxBackend {
                 )));
             }
 
-            let mut builder = Session::builder()
-                .map_err(|e| Error::other(format!("Session builder error: {}", e)))?;
-            builder
+            let session = Session::builder()
+                .map_err(|e| Error::other(format!("Session builder error: {}", e)))?
                 .with_optimization_level(GraphOptimizationLevel::Level3)
-                .map_err(|e| Error::other(format!("Opt level error: {}", e)))?;
-            builder
+                .map_err(|e| Error::other(format!("Opt level error: {}", e)))?
                 .with_intra_threads(4)
-                .map_err(|e| Error::other(format!("Threads error: {}", e)))?;
-            let session = builder
+                .map_err(|e| Error::other(format!("Threads error: {}", e)))?
                 .commit_from_file(model_path)
                 .map_err(|e| Error::other(format!("Model load error: {}", e)))?;
 
@@ -138,22 +135,23 @@ impl StemBackend for OnnxBackend {
             .map_err(|e| Error::other(format!("Shape error: {}", e)))?;
 
         // ort 2.0 requires explicit Value creation from ndarray.
-        let input_value = Value::from_array(input_tensor)
+        let input_value = Value::from_array(&input_tensor)
             .map_err(|e| Error::other(format!("Failed to create input tensor: {}", e)))?;
 
         let outputs = session
             .run(ort::inputs![
                 "input" => input_value,
-            ]?)
+            ])
             .map_err(|e| Error::other(format!("Inference failed: {}", e)))?;
 
         // Extract [1, 4, channels, frames]
         let out_value = &outputs[0];
-        let out_tensor = out_value
+        let (out_shape, out_data) = out_value
             .try_extract_tensor::<f32>()
             .map_err(|e| Error::other(format!("Extraction failed: {}", e)))?;
-        let out_view = out_tensor
-            .view()
+        
+        let out_view = ndarray::ArrayViewD::from_shape(out_shape.dims(), out_data)
+            .map_err(|e| Error::other(format!("ArrayView creation failed: {}", e)))?
             .to_dimensionality::<Ix4>()
             .map_err(|e| Error::other(format!("Output dimension mismatch: {}", e)))?;
 
