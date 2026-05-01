@@ -2,6 +2,7 @@
 name        = "pdj-plugins"
 version     = "0.0.1"
 edition     = "2021"
+license     = "MIT"
 
 [dependencies]
 pdj-core  = { path = "../pdj-core" }

@@ -59,7 +59,7 @@ struct PdjEngine {
     // Per-deck crossfader position (exposed via setter).
     std::atomic<float> crossfader{0.5f};
 
-    explicit PdjEngine(const PdjEngineConfig& cfg) : config(cfg) {}
+    explicit PdjEngine(const PdjEngineConfig& cfg) : config(cfg), beatgrids{} {}
 };
 
 // ---------------------------------------------------------------------------

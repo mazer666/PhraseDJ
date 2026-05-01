@@ -2,6 +2,7 @@
 name        = "phrasedj-desktop"
 version     = "0.0.1"
 edition     = "2021"
+license     = "MIT"
 description = "PhraseDJ desktop application shell"
 
 # This crate is only a binary (the Tauri app) – not a library.

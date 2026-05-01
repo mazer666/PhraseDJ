@@ -76,14 +76,29 @@
 - LRC fixtures synthesised in tests where possible to avoid copyright
   questions.
 
-## 9. Bug reports and reproducibility
+## 9. Known test-environment workarounds (to be replaced with real implementations)
+
+The following stubs exist in `apps/desktop/src/test-setup.ts` because jsdom does
+not provide Tauri or browser-canvas APIs.  Each item must be replaced with a
+real integration once the listed prerequisite is available.
+
+| Stub | Location | Why mocked | Prerequisites for real fix |
+|---|---|---|---|
+| `@tauri-apps/api/event` (`listen`, `emit`) | `test-setup.ts` | jsdom has no `window.__TAURI_INTERNALS__`; the Tauri event bus is unavailable outside a real Tauri webview | Set up a mock Tauri WebView context in CI, or use [Tauri's mock runtime](https://tauri.app/v2/guides/test/mocking) once it stabilises |
+| `HTMLCanvasElement.prototype.getContext` | `test-setup.ts` | jsdom does not implement the Canvas 2D API, so waveform-rendering code throws on component mount | Upgrade to a jsdom version with canvas support, or use `jest-canvas-mock` / `vitest-canvas-mock` |
+
+Until these are resolved, the stubs must not be removed without replacing them
+with real implementations.  Removing a stub without a replacement will cause
+test failures in the components that depend on these APIs.
+
+## 10. Bug reports and reproducibility
 
 - Issue template asks for OS, app version, hardware, audio device, and the
   contents of `network.log` if relevant.
 - A "diagnostic dump" action exports a sanitised state snapshot the user can
   attach: settings, recent log, library counts, no track paths.
 
-## 10. Manual QA checklist (per release)
+## 11. Manual QA checklist (per release)
 
 - Cold start under 2 s.
 - Load track, play, pause, seek, scratch — sounds clean.

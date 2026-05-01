@@ -29,7 +29,7 @@ use crate::{Error, Result};
 /// The fields are grouped by subsystem (audio, library, ui, …).
 /// Each field has a `#[serde(default)]` so that a partial user file still
 /// works — missing keys fall back to `Default::default()`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     pub audio: AudioSettings,
@@ -169,32 +169,11 @@ impl Default for UiSettings {
 }
 
 /// Network and privacy settings.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct NetworkSettings {
     /// Check for updates on startup (opt-in).
     pub update_check: bool,
-}
-
-impl Default for NetworkSettings {
-    fn default() -> Self {
-        Self {
-            update_check: false,
-        }
-    }
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            audio: AudioSettings::default(),
-            library: LibrarySettings::default(),
-            stems: StemsSettings::default(),
-            lyrics: LyricsSettings::default(),
-            ui: UiSettings::default(),
-            network: NetworkSettings::default(),
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------
