@@ -70,11 +70,14 @@ impl OnnxBackend {
 
             let mut builder = Session::builder()
                 .map_err(|e| Error::other(format!("Session builder error: {}", e)))?;
-            builder.with_optimization_level(GraphOptimizationLevel::Level3)
+            builder
+                .with_optimization_level(GraphOptimizationLevel::Level3)
                 .map_err(|e| Error::other(format!("Opt level error: {}", e)))?;
-            builder.with_intra_threads(4)
+            builder
+                .with_intra_threads(4)
                 .map_err(|e| Error::other(format!("Threads error: {}", e)))?;
-            let session = builder.commit_from_file(model_path)
+            let session = builder
+                .commit_from_file(model_path)
                 .map_err(|e| Error::other(format!("Model load error: {}", e)))?;
 
             *guard = Some(session);
