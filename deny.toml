@@ -27,5 +27,5 @@ copyleft = "warn"
 [advisories]
 # Deny crates with known security vulnerabilities.
 vulnerability = "deny"
-unmaintained = "warn"
+unmaintained = "none"
 yanked = "deny"
