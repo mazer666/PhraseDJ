@@ -15,7 +15,6 @@
 /// 1. Create `src/my_backend.rs` implementing `StemBackend`.
 /// 2. Register it in `src/lib.rs`.
 /// 3. Add a feature flag if the new backend requires an optional C library.
-
 use pdj_core::Result;
 
 // ---------------------------------------------------------------------------

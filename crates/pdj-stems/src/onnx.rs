@@ -1,9 +1,9 @@
+use directories::ProjectDirs;
 use ndarray::Array3;
-use ort::session::Session;
 use ort::session::builder::GraphOptimizationLevel;
+use ort::session::Session;
 use ort::value::Value;
 use pdj_core::{Error, Result};
-use directories::ProjectDirs;
 /// ONNX Runtime backend for stem separation.
 ///
 /// # Why ONNX?
@@ -144,8 +144,8 @@ impl StemBackend for OnnxBackend {
         let outputs = session
             .run(ort::inputs![input_value])
             .map_err(|e| Error::other(format!("Inference failed: {}", e)))?;
-        
-        // ort 2.0 Session::run returns a Result<SessionOutputs, Error>. 
+
+        // ort 2.0 Session::run returns a Result<SessionOutputs, Error>.
         // SessionOutputs implements Index<usize> and returns an SessionOutputValue.
 
         // Extract [1, 4, channels, frames]
