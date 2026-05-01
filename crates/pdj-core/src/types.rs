@@ -107,12 +107,12 @@ pub enum PhraseKind {
 impl std::fmt::Display for PhraseKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            PhraseKind::Intro  => "intro",
-            PhraseKind::Verse  => "verse",
+            PhraseKind::Intro => "intro",
+            PhraseKind::Verse => "verse",
             PhraseKind::Chorus => "chorus",
-            PhraseKind::Drop   => "drop",
-            PhraseKind::Outro  => "outro",
-            PhraseKind::Break  => "break",
+            PhraseKind::Drop => "drop",
+            PhraseKind::Outro => "outro",
+            PhraseKind::Break => "break",
         };
         write!(f, "{s}")
     }

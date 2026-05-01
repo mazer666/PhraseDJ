@@ -33,8 +33,9 @@ struct StemEvent {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     fmt()
-        .with_env_filter(EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     tracing::info!("PhraseDJ starting");
@@ -97,8 +98,7 @@ pub fn run() {
 /// Compute a path under the OS-specific app-support folder, creating
 /// intermediate directories.
 fn app_support_path(file: &str) -> PathBuf {
-    let dirs = ProjectDirs::from("io", "PhraseDJ", "PhraseDJ")
-        .expect("no app-support dir");
+    let dirs = ProjectDirs::from("io", "PhraseDJ", "PhraseDJ").expect("no app-support dir");
     let dir = dirs.config_local_dir().to_path_buf();
     let _ = std::fs::create_dir_all(&dir);
     dir.join(file)
@@ -109,10 +109,7 @@ fn app_support_path(file: &str) -> PathBuf {
 ///
 /// The React frontend listens for `"stem-status"` events and can
 /// hot-swap stems into a playing deck without a manual reload.
-async fn forward_stem_events(
-    mut rx: Receiver<(TrackId, StemStatus)>,
-    handle: tauri::AppHandle,
-) {
+async fn forward_stem_events(mut rx: Receiver<(TrackId, StemStatus)>, handle: tauri::AppHandle) {
     loop {
         match rx.recv().await {
             Ok((track_id, status)) => {

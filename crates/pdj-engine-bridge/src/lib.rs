@@ -70,22 +70,26 @@ pub struct WaveformPeaks {
 #[derive(Debug, Clone)]
 pub struct StemWaveformPeaks {
     pub vocals: Vec<f32>,
-    pub drums:  Vec<f32>,
-    pub bass:   Vec<f32>,
-    pub other:  Vec<f32>,
+    pub drums: Vec<f32>,
+    pub bass: Vec<f32>,
+    pub other: Vec<f32>,
 }
 
 /// Configuration for engine creation.
 #[derive(Debug, Clone, Copy)]
 pub struct EngineConfig {
-    pub sample_rate:   u32,
-    pub buffer_size:   u32,
+    pub sample_rate: u32,
+    pub buffer_size: u32,
     pub channel_count: u32,
 }
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        Self { sample_rate: 44_100, buffer_size: 128, channel_count: 2 }
+        Self {
+            sample_rate: 44_100,
+            buffer_size: 128,
+            channel_count: 2,
+        }
     }
 }
 
@@ -110,8 +114,8 @@ impl Engine {
     /// real audio device.
     pub fn new(config: EngineConfig) -> Result<Self> {
         let cfg = ffi::PdjEngineConfig {
-            sample_rate:   config.sample_rate,
-            buffer_size:   config.buffer_size,
+            sample_rate: config.sample_rate,
+            buffer_size: config.buffer_size,
             channel_count: config.channel_count,
         };
         // SAFETY: passing a valid pointer; engine handle returned by C++.
@@ -143,16 +147,26 @@ impl Engine {
     /// Load 4 separated stems onto a deck.
     pub fn load_stems(&self, deck: u32, path_main: &Path, stems: &[&Path; 4]) -> Result<()> {
         check_deck(deck)?;
-        let pm = CString::new(path_main.to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
-        let pv = CString::new(stems[0].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
-        let pd = CString::new(stems[1].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
-        let pb = CString::new(stems[2].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
-        let po = CString::new(stems[3].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
-        
+        let pm =
+            CString::new(path_main.to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        let pv =
+            CString::new(stems[0].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        let pd =
+            CString::new(stems[1].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        let pb =
+            CString::new(stems[2].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        let po =
+            CString::new(stems[3].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+
         let res = unsafe {
             ffi::pdj_engine_load_stems(
-                self.handle, deck,
-                pm.as_ptr(), pv.as_ptr(), pd.as_ptr(), pb.as_ptr(), po.as_ptr()
+                self.handle,
+                deck,
+                pm.as_ptr(),
+                pv.as_ptr(),
+                pd.as_ptr(),
+                pb.as_ptr(),
+                po.as_ptr(),
             )
         };
         check_result(res)
@@ -176,14 +190,18 @@ impl Engine {
     }
 
     pub fn position(&self, deck: u32) -> u64 {
-        if check_deck(deck).is_err() { return 0; }
+        if check_deck(deck).is_err() {
+            return 0;
+        }
         unsafe { ffi::pdj_engine_position(self.handle, deck) }
     }
 
     // ----- Mixer ---------------------------------------------------------
 
     pub fn set_fader(&self, deck: u32, value: f32) {
-        if check_deck(deck).is_err() { return; }
+        if check_deck(deck).is_err() {
+            return;
+        }
         unsafe { ffi::pdj_engine_set_fader(self.handle, deck, value.clamp(0.0, 1.0)) }
     }
 
@@ -196,20 +214,28 @@ impl Engine {
     }
 
     pub fn set_stem_gain(&self, deck: u32, stem: u32, value: f32) {
-        if check_deck(deck).is_err() { return; }
-        if stem >= 4 { return; }
+        if check_deck(deck).is_err() {
+            return;
+        }
+        if stem >= 4 {
+            return;
+        }
         unsafe { ffi::pdj_engine_set_stem_gain(self.handle, deck, stem, value.clamp(0.0, 1.5)) }
     }
 
     // ----- Status --------------------------------------------------------
 
     pub fn is_playing(&self, deck: u32) -> bool {
-        if check_deck(deck).is_err() { return false; }
+        if check_deck(deck).is_err() {
+            return false;
+        }
         unsafe { ffi::pdj_engine_is_playing(self.handle, deck) != 0 }
     }
 
     pub fn is_loaded(&self, deck: u32) -> bool {
-        if check_deck(deck).is_err() { return false; }
+        if check_deck(deck).is_err() {
+            return false;
+        }
         unsafe { ffi::pdj_engine_is_loaded(self.handle, deck) != 0 }
     }
 
@@ -228,7 +254,9 @@ impl Engine {
     }
 
     pub fn get_bpm(&self, deck: u32) -> f32 {
-        if check_deck(deck).is_err() { return 0.0; }
+        if check_deck(deck).is_err() {
+            return 0.0;
+        }
         unsafe { ffi::pdj_engine_get_bpm(self.handle, deck) }
     }
 
@@ -239,13 +267,17 @@ impl Engine {
     /// `ratio` is clamped to [0.5, 2.0] in the C++ layer.
     /// 1.0 = normal speed, 1.05 = +5 %, 0.95 = −5 %.
     pub fn set_tempo_ratio(&self, deck: u32, ratio: f32) {
-        if check_deck(deck).is_err() { return; }
+        if check_deck(deck).is_err() {
+            return;
+        }
         unsafe { ffi::pdj_engine_set_tempo_ratio(self.handle, deck, ratio) }
     }
 
     /// Return the current tempo ratio for a deck (1.0 if unset).
     pub fn get_tempo_ratio(&self, deck: u32) -> f32 {
-        if check_deck(deck).is_err() { return 1.0; }
+        if check_deck(deck).is_err() {
+            return 1.0;
+        }
         unsafe { ffi::pdj_engine_get_tempo_ratio(self.handle, deck) }
     }
 
@@ -254,7 +286,9 @@ impl Engine {
     /// The new ratio is clamped to [0.5, 2.0].
     /// Typical delta: ±0.01 (1 %) per key-press.
     pub fn nudge_tempo(&self, deck: u32, delta: f32) {
-        if check_deck(deck).is_err() { return; }
+        if check_deck(deck).is_err() {
+            return;
+        }
         let current = self.get_tempo_ratio(deck);
         let next = (current + delta).clamp(0.5, 2.0);
         self.set_tempo_ratio(deck, next);
@@ -269,13 +303,11 @@ impl Engine {
     ///
     /// Returns `(peaks_min, peaks_max)` where each Vec has `num_bins`
     /// elements.  `peaks_min[i]` is ≤ 0 and `peaks_max[i]` is ≥ 0.
-    pub fn compute_waveform(
-        &self,
-        deck: u32,
-        num_bins: u32,
-    ) -> Result<WaveformPeaks> {
+    pub fn compute_waveform(&self, deck: u32, num_bins: u32) -> Result<WaveformPeaks> {
         check_deck(deck)?;
-        if num_bins == 0 { return Err(BridgeError::InvalidArg); }
+        if num_bins == 0 {
+            return Err(BridgeError::InvalidArg);
+        }
 
         let mut peaks_min = vec![0.0f32; num_bins as usize];
         let mut peaks_max = vec![0.0f32; num_bins as usize];
@@ -290,21 +322,22 @@ impl Engine {
             )
         };
         check_result(res)?;
-        Ok(WaveformPeaks { peaks_min, peaks_max })
+        Ok(WaveformPeaks {
+            peaks_min,
+            peaks_max,
+        })
     }
 
-    pub fn compute_stem_waveforms(
-        &self,
-        deck: u32,
-        num_bins: u32,
-    ) -> Result<StemWaveformPeaks> {
+    pub fn compute_stem_waveforms(&self, deck: u32, num_bins: u32) -> Result<StemWaveformPeaks> {
         check_deck(deck)?;
-        if num_bins == 0 { return Err(BridgeError::InvalidArg); }
+        if num_bins == 0 {
+            return Err(BridgeError::InvalidArg);
+        }
 
         let mut vocals = vec![0.0f32; num_bins as usize];
-        let mut drums  = vec![0.0f32; num_bins as usize];
-        let mut bass   = vec![0.0f32; num_bins as usize];
-        let mut other  = vec![0.0f32; num_bins as usize];
+        let mut drums = vec![0.0f32; num_bins as usize];
+        let mut bass = vec![0.0f32; num_bins as usize];
+        let mut other = vec![0.0f32; num_bins as usize];
 
         let res = unsafe {
             ffi::pdj_engine_compute_stem_waveforms(
@@ -318,12 +351,19 @@ impl Engine {
             )
         };
         check_result(res)?;
-        Ok(StemWaveformPeaks { vocals, drums, bass, other })
+        Ok(StemWaveformPeaks {
+            vocals,
+            drums,
+            bass,
+            other,
+        })
     }
 
     /// Total frames in the currently-loaded file (0 if no file loaded).
     pub fn total_frames(&self, deck: u32) -> u64 {
-        if check_deck(deck).is_err() { return 0; }
+        if check_deck(deck).is_err() {
+            return 0;
+        }
         unsafe { ffi::pdj_engine_total_frames(self.handle, deck) }
     }
 
@@ -334,7 +374,7 @@ impl Engine {
     pub fn sync_tempo(&self, deck: u32) -> Result<()> {
         check_deck(deck)?;
         let other = 1 - deck;
-        let this_bpm  = self.get_bpm(deck);
+        let this_bpm = self.get_bpm(deck);
         let other_bpm = self.get_bpm(other);
         if this_bpm <= 0.0 || other_bpm <= 0.0 {
             warn!(deck, this_bpm, other_bpm, "sync_tempo: BPM not available");

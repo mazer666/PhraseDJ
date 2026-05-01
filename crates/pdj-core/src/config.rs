@@ -32,11 +32,11 @@ use crate::{Error, Result};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
-    pub audio:   AudioSettings,
+    pub audio: AudioSettings,
     pub library: LibrarySettings,
-    pub stems:   StemsSettings,
-    pub lyrics:  LyricsSettings,
-    pub ui:      UiSettings,
+    pub stems: StemsSettings,
+    pub lyrics: LyricsSettings,
+    pub ui: UiSettings,
     pub network: NetworkSettings,
 }
 
@@ -187,11 +187,11 @@ impl Default for NetworkSettings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            audio:   AudioSettings::default(),
+            audio: AudioSettings::default(),
             library: LibrarySettings::default(),
-            stems:   StemsSettings::default(),
-            lyrics:  LyricsSettings::default(),
-            ui:      UiSettings::default(),
+            stems: StemsSettings::default(),
+            lyrics: LyricsSettings::default(),
+            ui: UiSettings::default(),
             network: NetworkSettings::default(),
         }
     }
@@ -240,7 +240,10 @@ impl Config {
             debug!(?user_path, "Merged user settings");
         }
 
-        Ok(Config { settings, user_path })
+        Ok(Config {
+            settings,
+            user_path,
+        })
     }
 
     /// Write the current settings to the user override file atomically.
@@ -248,8 +251,8 @@ impl Config {
         if let Some(parent) = self.user_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let text = toml::to_string_pretty(&self.settings)
-            .map_err(|e| Error::Settings(e.to_string()))?;
+        let text =
+            toml::to_string_pretty(&self.settings).map_err(|e| Error::Settings(e.to_string()))?;
         // Atomic write via a temp file + rename.
         let tmp = self.user_path.with_extension("toml.tmp");
         std::fs::write(&tmp, text)?;
@@ -338,7 +341,10 @@ buffer_size = 256
         let mut cfg = Config::load(None).expect("load");
         // Mutate a value.
         cfg.settings.audio.buffer_size = 512;
-        cfg = Config { settings: cfg.settings, user_path: path.clone() };
+        cfg = Config {
+            settings: cfg.settings,
+            user_path: path.clone(),
+        };
         cfg.save().expect("save");
         // Reload.
         let text = std::fs::read_to_string(&path).expect("read");

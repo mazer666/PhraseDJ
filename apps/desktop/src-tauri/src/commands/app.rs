@@ -11,8 +11,7 @@ use crate::state::AppState;
 
 /// Default keymap bundled with the application binary.
 /// Loaded from `config/keymap.toml` at compile time.
-const DEFAULT_KEYMAP_TOML: &str =
-    include_str!("../../../../../config/keymap.toml");
+const DEFAULT_KEYMAP_TOML: &str = include_str!("../../../../../config/keymap.toml");
 
 /// Returns the application version string from Cargo.toml.
 #[tauri::command]
@@ -23,21 +22,25 @@ pub fn app_version() -> String {
 /// Status payload returned to the UI on startup.
 #[derive(Debug, Serialize)]
 pub struct AppStatus {
-    pub version:        String,
-    pub audio_running:  bool,
-    pub library_count:  i64,
+    pub version: String,
+    pub audio_running: bool,
+    pub library_count: i64,
 }
 
 /// Returns whether the audio engine is running and how many tracks the
 /// library currently holds.  Used by the UI for the status bar.
 #[tauri::command]
 pub fn app_status(state: State<'_, AppState>) -> AppStatus {
-    let audio_running = state.engine.lock()
+    let audio_running = state
+        .engine
+        .lock()
         .ok()
         .and_then(|guard| guard.as_ref().map(|e| e.is_running()))
         .unwrap_or(false);
 
-    let library_count = state.library.lock()
+    let library_count = state
+        .library
+        .lock()
         .ok()
         .and_then(|lib| lib.count().ok())
         .unwrap_or(0);
@@ -74,7 +77,9 @@ pub fn keymap_load() -> HashMap<String, String> {
 /// Parse a `[keymap]` TOML section into a flat key → intent map.
 fn parse_keymap_toml(src: &str) -> HashMap<String, String> {
     let mut out = HashMap::new();
-    let Ok(val) = src.parse::<Value>() else { return out };
+    let Ok(val) = src.parse::<Value>() else {
+        return out;
+    };
     let Some(table) = val.get("keymap").and_then(|v| v.as_table()) else {
         return out;
     };
@@ -96,13 +101,13 @@ fn parse_keymap_toml(src: &str) -> HashMap<String, String> {
 /// All values are read from (and saved to) the user's `settings.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiSettings {
-    pub sample_rate:     u32,
-    pub buffer_size:     u32,
+    pub sample_rate: u32,
+    pub buffer_size: u32,
     pub pitch_range_pct: f32,
-    pub music_root:      String,
-    pub online_lookup:   bool,
-    pub target_fps:      u32,
-    pub update_check:    bool,
+    pub music_root: String,
+    pub online_lookup: bool,
+    pub target_fps: u32,
+    pub update_check: bool,
 }
 
 impl Default for UiSettings {
@@ -110,13 +115,13 @@ impl Default for UiSettings {
         // Mirror config/defaults.toml so the UI shows correct defaults
         // when no user override file exists.
         Self {
-            sample_rate:     44_100,
-            buffer_size:     128,
+            sample_rate: 44_100,
+            buffer_size: 128,
             pitch_range_pct: 8.0,
-            music_root:      "~/Music".to_string(),
-            online_lookup:   false,
-            target_fps:      60,
-            update_check:    false,
+            music_root: "~/Music".to_string(),
+            online_lookup: false,
+            target_fps: 60,
+            update_check: false,
         }
     }
 }
@@ -204,13 +209,13 @@ target_fps = {fps}
 [network]
 update_check = {uc}
 "#,
-        sr  = settings.sample_rate,
-        bs  = settings.buffer_size,
-        pr  = settings.pitch_range_pct,
-        mr  = settings.music_root.replace('"', "\\\""),
-        ol  = settings.online_lookup,
+        sr = settings.sample_rate,
+        bs = settings.buffer_size,
+        pr = settings.pitch_range_pct,
+        mr = settings.music_root.replace('"', "\\\""),
+        ol = settings.online_lookup,
         fps = settings.target_fps,
-        uc  = settings.update_check,
+        uc = settings.update_check,
     );
 
     std::fs::write(&path, content).map_err(|e| e.to_string())

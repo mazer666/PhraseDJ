@@ -19,8 +19,8 @@ pub struct PdjEngine {
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct PdjEngineConfig {
-    pub sample_rate:   u32,
-    pub buffer_size:   u32,
+    pub sample_rate: u32,
+    pub buffer_size: u32,
     pub channel_count: u32,
 }
 
@@ -29,11 +29,11 @@ pub struct PdjEngineConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)] // discriminants are read across FFI; suppress lint
 pub enum PdjResult {
-    Ok          = 0,
-    InvalidArg  = 1,
-    NotReady    = 2,
-    Io          = 3,
-    Internal    = 4,
+    Ok = 0,
+    InvalidArg = 1,
+    NotReady = 2,
+    Io = 3,
+    Internal = 4,
 }
 
 extern "C" {
@@ -94,15 +94,8 @@ extern "C" {
     pub fn pdj_engine_get_bpm(engine: *mut PdjEngine, deck_index: u32) -> c_float;
 
     // Tempo control
-    pub fn pdj_engine_set_tempo_ratio(
-        engine: *mut PdjEngine,
-        deck_index: u32,
-        ratio: c_float,
-    );
-    pub fn pdj_engine_get_tempo_ratio(
-        engine: *mut PdjEngine,
-        deck_index: u32,
-    ) -> c_float;
+    pub fn pdj_engine_set_tempo_ratio(engine: *mut PdjEngine, deck_index: u32, ratio: c_float);
+    pub fn pdj_engine_get_tempo_ratio(engine: *mut PdjEngine, deck_index: u32) -> c_float;
 
     // Waveform analysis
     pub fn pdj_engine_compute_waveform(

@@ -53,7 +53,7 @@ impl AppState {
         let stems = pdj_stems::StemService::start(settings, cache_root);
 
         Ok(Self {
-            engine:  Mutex::new(engine),
+            engine: Mutex::new(engine),
             library: Mutex::new(library),
             stems,
             db_path,
