@@ -4,6 +4,7 @@
 //! schema; later phases add new columns via numbered migration files.
 
 use pdj_core::TrackId;
+use rusqlite;
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
