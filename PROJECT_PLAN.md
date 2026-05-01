@@ -74,14 +74,18 @@ them in sync via keyboard, and mix them with the crossfader."
 **Goal:** four stems per deck, controllable via sliders instead of EQ in stem
 mode. Background analysis on library import.
 
-- [ ] Port HTDemucs to MLX (4-stem)
-- [ ] ONNX Runtime fallback (Linux/Windows preparation)
-- [ ] `pdj-stems` crate with an async job queue
-- [ ] Background analysis on import; cache stems in app-support folder
-- [ ] Stem player in the audio engine (4 parallel streams per deck)
-- [ ] Stem mixer UI (4 faders per deck instead of 3-band EQ)
-- [ ] Stem waveform (multi-colour: vocals/drums/bass/other)
-- [ ] Memory-budget guard (cap parallel stems)
+- [x] `pdj-stems` crate with an async job queue
+- [x] `StemBackend` trait + `MlxBackend` stub (Apple Silicon detection real; inference stubbed)
+- [x] `OnnxBackend` stub (cross-platform fallback, always available)
+- [ ] Port HTDemucs to MLX (4-stem) — real inference (stub in place)
+- [ ] ONNX Runtime fallback (Linux/Windows) — real inference (stub in place)
+- [x] Background analysis on import; cache stems in app-support folder (queue + LRU path helpers)
+- [x] Overlap-add stitching + WAV/FLAC writing (`stitch` module)
+- [x] Cache path layout (`paths` module; `StemPaths`)
+- [x] Stem player in the audio engine (4 parallel streams per deck)
+- [x] Stem mixer UI (4 faders per deck instead of 3-band EQ)
+- [x] Stem waveform (multi-colour: vocals/drums/bass/other)
+- [x] Memory-budget guard (cap parallel stems)
 
 **Milestone 2 (M13):** "During a mix I can isolate the vocals from deck A and
 the drums from deck B and layer them."

@@ -76,6 +76,17 @@ PdjResult pdj_engine_load(PdjEngine* engine,
                            uint32_t   deck_index,
                            const char* file_path);
 
+/**
+ * Load 4 separated stems onto a deck.
+ */
+PdjResult pdj_engine_load_stems(PdjEngine* engine,
+                                uint32_t   deck_index,
+                                const char* path_main,
+                                const char* path_v,
+                                const char* path_d,
+                                const char* path_b,
+                                const char* path_o);
+
 /** Start playback on a deck. */
 PdjResult pdj_engine_play(PdjEngine* engine, uint32_t deck_index);
 
@@ -188,6 +199,22 @@ PdjResult pdj_engine_compute_waveform(PdjEngine* engine,
                                        uint32_t   num_bins,
                                        float*     out_min,
                                        float*     out_max);
+
+/**
+ * Compute stem waveform peak data.
+ *
+ * Like compute_waveform, but returns 4 arrays of `num_bins` floats
+ * representing the absolute peak amplitudes for vocals, drums, bass,
+ * and other, respectively.
+ * Returns PdjResult_NotReady if stems are not loaded for this deck.
+ */
+PdjResult pdj_engine_compute_stem_waveforms(PdjEngine* engine,
+                                            uint32_t   deck_index,
+                                            uint32_t   num_bins,
+                                            float*     out_v,
+                                            float*     out_d,
+                                            float*     out_b,
+                                            float*     out_o);
 
 /**
  * Return the total number of frames in the currently-loaded file.

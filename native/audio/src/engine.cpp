@@ -50,6 +50,9 @@ struct PdjEngine {
     // File path last loaded per deck — used for waveform peak computation.
     std::array<std::string, 2> deck_paths;
 
+    // Stem paths last loaded per deck. Empty if stems not loaded.
+    std::array<std::array<std::string, 4>, 2> deck_stem_paths;
+
     // Mutex protects beatgrids and non-RT control operations.
     std::mutex control_mutex;
 
@@ -122,6 +125,32 @@ PdjResult pdj_engine_load(PdjEngine*  engine,
     const std::string path(file_path);
     const bool ok = engine->decks[deck_index]->load(path, engine->config.sample_rate);
     if (ok) engine->deck_paths[deck_index] = path;
+    return ok ? PdjResult_Ok : PdjResult_Io;
+}
+
+PdjResult pdj_engine_load_stems(PdjEngine* engine,
+                                uint32_t   deck_index,
+                                const char* path_main,
+                                const char* path_v,
+                                const char* path_d,
+                                const char* path_b,
+                                const char* path_o) {
+    if (!path_main || !path_v || !path_d || !path_b || !path_o) return PdjResult_InvalidArg;
+    if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
+
+    const std::string pm(path_main);
+    const bool ok = engine->decks[deck_index]->load_stems(
+        pm, std::string(path_v), std::string(path_d),
+        std::string(path_b), std::string(path_o),
+        engine->config.sample_rate);
+    
+    if (ok) {
+        engine->deck_paths[deck_index] = pm;
+        engine->deck_stem_paths[deck_index] = {
+            std::string(path_v), std::string(path_d),
+            std::string(path_b), std::string(path_o)
+        };
+    }
     return ok ? PdjResult_Ok : PdjResult_Io;
 }
 
@@ -304,6 +333,64 @@ PdjResult pdj_engine_compute_waveform(PdjEngine* engine,
         frames_done += got;
         if (res == pdj::DecodeResult::EndOfFile) break;
         if (res != pdj::DecodeResult::Ok) break;
+    }
+
+    return PdjResult_Ok;
+}
+
+PdjResult pdj_engine_compute_stem_waveforms(PdjEngine* engine,
+                                            uint32_t   deck_index,
+                                            uint32_t   num_bins,
+                                            float*     out_v,
+                                            float*     out_d,
+                                            float*     out_b,
+                                            float*     out_o) {
+    if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
+    if (!out_v || !out_d || !out_b || !out_o || num_bins == 0) return PdjResult_InvalidArg;
+
+    const auto& paths = engine->deck_stem_paths[deck_index];
+    if (paths[0].empty()) return PdjResult_NotReady;
+
+    float* outs[4] = { out_v, out_d, out_b, out_o };
+
+    for (int s = 0; s < 4; ++s) {
+        auto dec = pdj::Decoder::open(paths[s], engine->config.sample_rate);
+        if (!dec) return PdjResult_Io;
+
+        const uint64_t total_frames = dec->info().total_frames;
+        if (total_frames == 0) return PdjResult_Internal;
+
+        for (uint32_t i = 0; i < num_bins; ++i) outs[s][i] = 0.0f;
+
+        const double frames_per_bin =
+            static_cast<double>(total_frames) / static_cast<double>(num_bins);
+
+        constexpr uint32_t CHUNK = 4096;
+        std::vector<float> buf(CHUNK * 2);
+        uint64_t frames_done = 0;
+
+        while (true) {
+            uint32_t got = 0;
+            const auto res = dec->read_frames(buf.data(), CHUNK, got);
+            if (got == 0) break;
+
+            for (uint32_t f = 0; f < got; ++f) {
+                const uint64_t fi  = frames_done + f;
+                const uint32_t bin = static_cast<uint32_t>(
+                    static_cast<double>(fi) / frames_per_bin);
+                if (bin >= num_bins) break;
+
+                const float l = std::abs(buf[f * 2]);
+                const float r = std::abs(buf[f * 2 + 1]);
+                const float peak = (l + r) * 0.5f;
+
+                if (peak > outs[s][bin]) outs[s][bin] = peak;
+            }
+
+            frames_done += got;
+            if (res == pdj::DecodeResult::EndOfFile) break;
+            if (res != pdj::DecodeResult::Ok) break;
+        }
     }
 
     return PdjResult_Ok;

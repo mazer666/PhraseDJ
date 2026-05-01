@@ -54,6 +54,7 @@ export interface WaveformData {
   num_bins:     number;
   peaks_min:    number[];
   peaks_max:    number[];
+  stem_peaks:   [number[], number[], number[], number[]] | null;
   total_frames: number;
 }
 

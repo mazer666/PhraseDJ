@@ -19,10 +19,12 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
   const state      = useEngineStore((s) => s.decks[deckIndex]);
   const waveform   = useEngineStore((s) => s.waveforms[deckIndex]);
   const fader      = useEngineStore((s) => (side === "A" ? s.faderA : s.faderB));
+  const stemGains  = useEngineStore((s) => (side === "A" ? s.stemGainsA : s.stemGainsB));
   const load       = useEngineStore((s) => s.load);
   const play       = useEngineStore((s) => s.play);
   const pause      = useEngineStore((s) => s.pause);
   const setFader   = useEngineStore((s) => s.setFader);
+  const setStemGain = useEngineStore((s) => s.setStemGain);
   const sync       = useEngineStore((s) => s.sync);
   const nudgeTempo = useEngineStore((s) => s.nudgeTempo);
 
@@ -131,8 +133,30 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
         </button>
       </div>
 
-      <div className="deck-fader-block">
-        <label>Fader</label>
+      <div className="deck-stems-block">
+        {[
+          { label: "Vocals", index: 0 as const },
+          { label: "Drums", index: 1 as const },
+          { label: "Bass", index: 2 as const },
+          { label: "Other", index: 3 as const },
+        ].map(({ label, index }) => (
+          <div className="deck-fader-block stem-fader" key={label}>
+            <label>{label}</label>
+            <input
+              type="range"
+              min={0}
+              max={1.5}
+              step={0.01}
+              value={stemGains[index]}
+              onChange={(e) => setStemGain(deckIndex, index, parseFloat(e.target.value))}
+            />
+            <span className="value-label">{Math.round(stemGains[index] * 100)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="deck-fader-block main-fader">
+        <label>Level</label>
         <input
           type="range"
           min={0}
@@ -140,7 +164,7 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
           step={0.01}
           value={fader}
           onChange={(e) =>
-            setFader(deckIndex as 0 | 1, parseFloat(e.target.value))
+            setFader(deckIndex, parseFloat(e.target.value))
           }
         />
         <span className="value-label">{Math.round(fader * 100)}</span>

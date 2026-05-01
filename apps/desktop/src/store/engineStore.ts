@@ -21,6 +21,8 @@ interface EngineStore {
   // Mixer state (kept locally; pushed to engine on change).
   faderA: number;
   faderB: number;
+  stemGainsA: [number, number, number, number];
+  stemGainsB: [number, number, number, number];
   crossfader: number;
   masterGain: number;
 
@@ -35,6 +37,7 @@ interface EngineStore {
   setFader:      (deck: 0 | 1, value: number) => Promise<void>;
   setCrossfader: (value: number) => Promise<void>;
   setMasterGain: (value: number) => Promise<void>;
+  setStemGain:   (deck: 0 | 1, stem: 0 | 1 | 2 | 3, value: number) => Promise<void>;
   /** Sync a deck's tempo to the opposite deck's BPM. */
   sync:    (deck: 0 | 1) => Promise<void>;
   /** Nudge playback speed by a small delta (positive = faster). */
@@ -59,6 +62,8 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   waveforms: [null, null],
   faderA: 1.0,
   faderB: 1.0,
+  stemGainsA: [1.0, 1.0, 1.0, 1.0],
+  stemGainsB: [1.0, 1.0, 1.0, 1.0],
   crossfader: 0.5,
   masterGain: 1.0,
 
@@ -113,6 +118,21 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   setMasterGain: async (value) => {
     await mixerApi.setMasterGain(value);
     set({ masterGain: value });
+  },
+
+  setStemGain: async (deck, stem, value) => {
+    await mixerApi.setStemGain(deck, stem, value);
+    set((s) => {
+      if (deck === 0) {
+        const next = [...s.stemGainsA] as [number, number, number, number];
+        next[stem] = value;
+        return { stemGainsA: next };
+      } else {
+        const next = [...s.stemGainsB] as [number, number, number, number];
+        next[stem] = value;
+        return { stemGainsB: next };
+      }
+    });
   },
 
   sync: (deck) => deckApi.sync(deck),

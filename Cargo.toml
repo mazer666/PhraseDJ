@@ -24,8 +24,11 @@ tracing        = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 toml           = "0.8"
 uuid           = { version = "1", features = ["v4", "serde"] }
-rusqlite       = { version = "0.32", features = ["bundled"] }
-directories    = "5"
+rusqlite         = { version = "0.32", features = ["bundled"] }
+directories      = "5"
+async-broadcast  = "0.7"
+num_cpus         = "1"
+hound            = "3"
 
 # Common profile tweaks.
 [profile.dev]

@@ -42,5 +42,6 @@ serde_json = { workspace = true }
 pdj-core           = { path = "../../../crates/pdj-core" }
 pdj-engine-bridge  = { path = "../../../crates/pdj-engine-bridge" }
 pdj-library        = { path = "../../../crates/pdj-library" }
+pdj-stems          = { path = "../../../crates/pdj-stems" }
 
 # Profile settings belong in the workspace root Cargo.toml, not here.

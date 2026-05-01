@@ -20,6 +20,8 @@ pub struct WaveformData {
     pub peaks_min:     Vec<f32>,
     /// Maximum (positive) amplitude per bin.
     pub peaks_max:     Vec<f32>,
+    /// Stem peaks if available [vocals, drums, bass, other]. All are positive.
+    pub stem_peaks:    Option<Vec<Vec<f32>>>,
     /// Total frames in the track at the engine's sample rate.
     pub total_frames:  u64,
 }
@@ -42,9 +44,47 @@ pub fn deck_load(deck: u32, path: String, state: State<'_, AppState>)
     -> Result<(), String>
 {
     let p = PathBuf::from(&path);
+    
+    // Auto-import to get TrackId (or find existing)
+    let track_id = {
+        let lib = state.library.lock().map_err(|e| e.to_string())?;
+        pdj_library::import_file(&lib, &p)
+            .map(|outcome| outcome.id())
+            .map_err(|e| e.to_string())?
+    };
+
+    // Enqueue for background stem separation. If it's already cached or running,
+    // the queue handles idempotency internally.
+    if let Err(e) = state.stems.submit(pdj_stems::QueueJob {
+        track: track_id,
+        path:  p.clone(),
+    }) {
+        tracing::warn!("Failed to queue stem separation: {}", e);
+    }
+    
+    // Check if stems exist
+    let has_stems = {
+        if let Ok(root) = pdj_stems::paths::stem_cache_root() {
+            let paths = pdj_stems::paths::stem_paths_for(&root, track_id);
+            if paths.all_exist() {
+                Some(paths)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+    
     let guard = state.engine.lock().map_err(|e| e.to_string())?;
     let engine = guard.as_ref().ok_or("audio engine not available")?;
-    engine.load(deck, &p).map_err(|e| e.to_string())
+    
+    if let Some(stems) = has_stems {
+        let arr = [&stems.vocals.as_path(), &stems.drums.as_path(), &stems.bass.as_path(), &stems.other.as_path()];
+        engine.load_stems(deck, &p, &arr).map_err(|e| e.to_string())
+    } else {
+        engine.load(deck, &p).map_err(|e| e.to_string())
+    }
 }
 
 /// Toggle play/pause on a deck.
@@ -137,10 +177,19 @@ pub async fn deck_waveform(deck: u32, bins: u32,
     let engine = guard.as_ref().ok_or("audio engine not available")?;
     let total_frames = engine.total_frames(deck);
     let peaks = engine.compute_waveform(deck, bins).map_err(|e| e.to_string())?;
+    
+    // Try to get stem peaks too, but don't fail if they aren't loaded.
+    let stem_peaks = if let Ok(sp) = engine.compute_stem_waveforms(deck, bins) {
+        Some(vec![sp.vocals, sp.drums, sp.bass, sp.other])
+    } else {
+        None
+    };
+
     Ok(WaveformData {
         num_bins:     bins,
         peaks_min:    peaks.peaks_min,
         peaks_max:    peaks.peaks_max,
+        stem_peaks,
         total_frames,
     })
 }

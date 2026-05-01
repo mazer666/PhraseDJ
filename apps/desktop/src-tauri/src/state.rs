@@ -22,6 +22,9 @@ pub struct AppState {
     /// The local music library.
     pub library: Mutex<Library>,
 
+    /// The stem separation background service.
+    pub stems: pdj_stems::StemService,
+
     /// Path to the database file (for diagnostics).
     pub db_path: PathBuf,
 }
@@ -44,9 +47,15 @@ impl AppState {
             }
         };
 
+        // Start the stem separation service (runs on the Tokio reactor).
+        let settings = pdj_core::StemsSettings::default();
+        let cache_root = pdj_stems::paths::stem_cache_root()?;
+        let stems = pdj_stems::StemService::start(settings, cache_root);
+
         Ok(Self {
             engine:  Mutex::new(engine),
             library: Mutex::new(library),
+            stems,
             db_path,
         })
     }

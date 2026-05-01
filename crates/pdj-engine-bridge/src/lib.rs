@@ -66,6 +66,15 @@ pub struct WaveformPeaks {
     pub peaks_max: Vec<f32>,
 }
 
+/// Stem waveform peak data returned by `Engine::compute_stem_waveforms`.
+#[derive(Debug, Clone)]
+pub struct StemWaveformPeaks {
+    pub vocals: Vec<f32>,
+    pub drums:  Vec<f32>,
+    pub bass:   Vec<f32>,
+    pub other:  Vec<f32>,
+}
+
 /// Configuration for engine creation.
 #[derive(Debug, Clone, Copy)]
 pub struct EngineConfig {
@@ -128,6 +137,24 @@ impl Engine {
         let cpath = CString::new(path_str.as_ref()).map_err(|_| BridgeError::BadPath)?;
         // SAFETY: handle non-null; path is a valid CString for the call duration.
         let res = unsafe { ffi::pdj_engine_load(self.handle, deck, cpath.as_ptr()) };
+        check_result(res)
+    }
+
+    /// Load 4 separated stems onto a deck.
+    pub fn load_stems(&self, deck: u32, path_main: &Path, stems: &[&Path; 4]) -> Result<()> {
+        check_deck(deck)?;
+        let pm = CString::new(path_main.to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        let pv = CString::new(stems[0].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        let pd = CString::new(stems[1].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        let pb = CString::new(stems[2].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        let po = CString::new(stems[3].to_string_lossy().as_ref()).map_err(|_| BridgeError::BadPath)?;
+        
+        let res = unsafe {
+            ffi::pdj_engine_load_stems(
+                self.handle, deck,
+                pm.as_ptr(), pv.as_ptr(), pd.as_ptr(), pb.as_ptr(), po.as_ptr()
+            )
+        };
         check_result(res)
     }
 
@@ -264,6 +291,34 @@ impl Engine {
         };
         check_result(res)?;
         Ok(WaveformPeaks { peaks_min, peaks_max })
+    }
+
+    pub fn compute_stem_waveforms(
+        &self,
+        deck: u32,
+        num_bins: u32,
+    ) -> Result<StemWaveformPeaks> {
+        check_deck(deck)?;
+        if num_bins == 0 { return Err(BridgeError::InvalidArg); }
+
+        let mut vocals = vec![0.0f32; num_bins as usize];
+        let mut drums  = vec![0.0f32; num_bins as usize];
+        let mut bass   = vec![0.0f32; num_bins as usize];
+        let mut other  = vec![0.0f32; num_bins as usize];
+
+        let res = unsafe {
+            ffi::pdj_engine_compute_stem_waveforms(
+                self.handle,
+                deck,
+                num_bins,
+                vocals.as_mut_ptr(),
+                drums.as_mut_ptr(),
+                bass.as_mut_ptr(),
+                other.as_mut_ptr(),
+            )
+        };
+        check_result(res)?;
+        Ok(StemWaveformPeaks { vocals, drums, bass, other })
     }
 
     /// Total frames in the currently-loaded file (0 if no file loaded).

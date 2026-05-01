@@ -159,6 +159,19 @@ body {
   letter-spacing: 0.08em;
 }
 
+.deck-stems-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 12px;
+  background: var(--color-surface-2);
+  border-radius: 6px;
+}
+.deck-stems-block label {
+  width: 48px;
+}
+
 .value-label {
   font-family: var(--font-mono);
   font-size: 12px;

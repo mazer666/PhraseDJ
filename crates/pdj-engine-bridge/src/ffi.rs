@@ -48,6 +48,16 @@ extern "C" {
         file_path: *const c_char,
     ) -> PdjResult;
 
+    pub fn pdj_engine_load_stems(
+        engine: *mut PdjEngine,
+        deck_index: u32,
+        path_main: *const c_char,
+        path_v: *const c_char,
+        path_d: *const c_char,
+        path_b: *const c_char,
+        path_o: *const c_char,
+    ) -> PdjResult;
+
     // Transport
     pub fn pdj_engine_play(engine: *mut PdjEngine, deck_index: u32) -> PdjResult;
     pub fn pdj_engine_pause(engine: *mut PdjEngine, deck_index: u32) -> PdjResult;
@@ -101,6 +111,15 @@ extern "C" {
         num_bins: u32,
         out_min: *mut c_float,
         out_max: *mut c_float,
+    ) -> PdjResult;
+    pub fn pdj_engine_compute_stem_waveforms(
+        engine: *mut PdjEngine,
+        deck_index: u32,
+        num_bins: u32,
+        out_v: *mut c_float,
+        out_d: *mut c_float,
+        out_b: *mut c_float,
+        out_o: *mut c_float,
     ) -> PdjResult;
     pub fn pdj_engine_total_frames(engine: *mut PdjEngine, deck_index: u32) -> u64;
 }

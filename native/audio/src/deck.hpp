@@ -68,6 +68,14 @@ public:
     /** Load a file.  Stops any current playback and starts prefetching. */
     bool load(const std::string& path, uint32_t sample_rate);
 
+    /** Load 4 stems. */
+    bool load_stems(const std::string& path_main,
+                    const std::string& path_v,
+                    const std::string& path_d,
+                    const std::string& path_b,
+                    const std::string& path_o,
+                    uint32_t sample_rate);
+
     /** Start playback. */
     void play();
 
@@ -123,12 +131,13 @@ private:
     void wake_prefetch();
 
     DeckPlayState  state_;
-    RingBuffer<float, DECK_RING_CAP> ring_;
+    std::unique_ptr<Decoder>  decoders_[4];
+    RingBuffer<float, DECK_RING_CAP> rings_[4];
 
-    std::unique_ptr<Decoder>  decoder_;
     AudioInfo                 audio_info_{};
     std::atomic<uint64_t>     position_{0};
     std::atomic<bool>         loaded_{false};
+    std::atomic<bool>         has_stems_{false};
     std::atomic<bool>         eof_{false};
 
     // Prefetch thread synchronisation.
@@ -144,6 +153,7 @@ private:
     // Small mix scratch buffer (no alloc in callback).
     static constexpr uint32_t SCRATCH_FRAMES = 4096;
     float scratch_[SCRATCH_FRAMES * 2]{};
+    float stem_scratch_[SCRATCH_FRAMES * 2]{};
 };
 
 } // namespace pdj

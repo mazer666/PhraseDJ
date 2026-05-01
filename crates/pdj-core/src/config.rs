@@ -106,6 +106,11 @@ pub struct StemsSettings {
     pub stem_count: u8,
     /// Whether to run analysis automatically on every import.
     pub auto_analyse: bool,
+    /// Maximum parallel analysis jobs.
+    ///
+    /// `0` means "n_performance_cores − 1" (auto), which leaves one core
+    /// free for real-time audio playback.
+    pub max_parallel_jobs: u8,
 }
 
 impl Default for StemsSettings {
@@ -114,6 +119,7 @@ impl Default for StemsSettings {
             model: String::from("htdemucs"),
             stem_count: 4,
             auto_analyse: true,
+            max_parallel_jobs: 0,
         }
     }
 }

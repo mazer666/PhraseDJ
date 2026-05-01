@@ -45,13 +45,60 @@ bool Deck::load(const std::string& path, uint32_t sample_rate) {
     state_.playing.store(false);
     sample_rate_ = sample_rate;
     audio_info_  = dec->info();
-    decoder_     = std::move(dec);
+    
+    for (int i = 0; i < 4; ++i) {
+        decoders_[i].reset();
+        rings_[i].reset();
+    }
+    decoders_[0] = std::move(dec);
+
     position_.store(0);
     eof_.store(false);
     loaded_.store(true);
-    ring_.reset();
+    has_stems_.store(false);
 
     // Launch new prefetch thread.
+    prefetch_run_.store(true);
+    prefetch_thread_ = std::thread(&Deck::prefetch_loop, this);
+
+    return true;
+}
+
+bool Deck::load_stems(const std::string& path_main,
+                      const std::string& path_v,
+                      const std::string& path_d,
+                      const std::string& path_b,
+                      const std::string& path_o,
+                      uint32_t sample_rate) {
+    prefetch_run_.store(false);
+    wake_prefetch();
+    if (prefetch_thread_.joinable()) prefetch_thread_.join();
+
+    auto dec_v = Decoder::open(path_v, sample_rate);
+    auto dec_d = Decoder::open(path_d, sample_rate);
+    auto dec_b = Decoder::open(path_b, sample_rate);
+    auto dec_o = Decoder::open(path_o, sample_rate);
+
+    if (!dec_v || !dec_d || !dec_b || !dec_o) {
+        // Fallback to normal load if any stem fails to open
+        return load(path_main, sample_rate);
+    }
+
+    state_.playing.store(false);
+    sample_rate_ = sample_rate;
+    audio_info_  = dec_v->info(); // Use vocals info as reference
+
+    for (int i = 0; i < 4; ++i) rings_[i].reset();
+    decoders_[0] = std::move(dec_v);
+    decoders_[1] = std::move(dec_d);
+    decoders_[2] = std::move(dec_b);
+    decoders_[3] = std::move(dec_o);
+
+    position_.store(0);
+    eof_.store(false);
+    loaded_.store(true);
+    has_stems_.store(true);
+
     prefetch_run_.store(true);
     prefetch_thread_ = std::thread(&Deck::prefetch_loop, this);
 
@@ -90,9 +137,25 @@ uint32_t Deck::mix_into(float* out, uint32_t frames) noexcept {
     // Fast path: no resampling when pitch is within 0.1 % of unity.
     if (pitch >= 0.999f && pitch <= 1.001f) {
         const uint32_t to_read = std::min(frames, SCRATCH_FRAMES);
-        const std::size_t samples = ring_.pop(scratch_, to_read * 2);
-        const uint32_t frames_got = static_cast<uint32_t>(samples) / 2;
+        
+        std::size_t available = to_read * 2;
+        for (int i = 0; i < 4; ++i) {
+            if (decoders_[i]) available = std::min(available, rings_[i].read_available());
+        }
+        const uint32_t frames_got = static_cast<uint32_t>(available) / 2;
         if (frames_got == 0) return 0;
+        
+        std::fill_n(scratch_, frames_got * 2, 0.0f);
+        for (int s = 0; s < 4; ++s) {
+            if (decoders_[s]) {
+                rings_[s].pop(stem_scratch_, frames_got * 2);
+                const float sg = has_stems_.load() ? state_.stem_gain[s].load() : 1.0f;
+                for (uint32_t i = 0; i < frames_got * 2; ++i) {
+                    scratch_[i] += stem_scratch_[i] * sg;
+                }
+            }
+        }
+        
         for (uint32_t i = 0; i < frames_got * 2; ++i) {
             out[i] += scratch_[i] * g;
         }
@@ -110,9 +173,23 @@ uint32_t Deck::mix_into(float* out, uint32_t frames) noexcept {
         static_cast<uint32_t>(static_cast<float>(frames) * pitch + 0.5f),
         SCRATCH_FRAMES);
 
-    const std::size_t popped = ring_.pop(scratch_, input_frames * 2);
-    const uint32_t got_frames = static_cast<uint32_t>(popped) / 2;
+    std::size_t available = input_frames * 2;
+    for (int i = 0; i < 4; ++i) {
+        if (decoders_[i]) available = std::min(available, rings_[i].read_available());
+    }
+    const uint32_t got_frames = static_cast<uint32_t>(available) / 2;
     if (got_frames == 0) return 0;
+
+    std::fill_n(scratch_, got_frames * 2, 0.0f);
+    for (int s = 0; s < 4; ++s) {
+        if (decoders_[s]) {
+            rings_[s].pop(stem_scratch_, got_frames * 2);
+            const float sg = has_stems_.load() ? state_.stem_gain[s].load() : 1.0f;
+            for (uint32_t i = 0; i < got_frames * 2; ++i) {
+                scratch_[i] += stem_scratch_[i] * sg;
+            }
+        }
+    }
 
     // Derive the actual output count from what we really got.
     const uint32_t out_frames = std::min(
@@ -155,28 +232,37 @@ void Deck::prefetch_loop() {
         if (seek_pending_.load()) {
             seek_pending_.store(false);
             const uint64_t target = seek_target_.load();
-            if (decoder_) {
-                decoder_->seek_to(target);
-                position_.store(target);
-                eof_.store(false);
-                ring_.reset();
+            for (int i = 0; i < 4; ++i) {
+                if (decoders_[i]) {
+                    decoders_[i]->seek_to(target);
+                    rings_[i].reset();
+                }
             }
+            position_.store(target);
+            eof_.store(false);
         }
 
-        // Fill the ring buffer up to 75 % capacity.
-        if (!eof_.load() && decoder_) {
-            while (ring_.write_available() > CHUNK * 2) {
-                uint32_t got = 0;
-                const auto res = decoder_->read_frames(buf.data(), CHUNK, got);
-                if (got > 0) {
-                    ring_.push(buf.data(), got * 2);
+        // Fill the ring buffers up to 75 % capacity.
+        if (!eof_.load()) {
+            bool any_eof = false;
+            for (int i = 0; i < 4; ++i) {
+                if (!decoders_[i]) continue;
+                while (rings_[i].write_available() > CHUNK * 2) {
+                    uint32_t got = 0;
+                    const auto res = decoders_[i]->read_frames(buf.data(), CHUNK, got);
+                    if (got > 0) {
+                        rings_[i].push(buf.data(), got * 2);
+                    }
+                    if (res == DecodeResult::EndOfFile) {
+                        any_eof = true;
+                        break;
+                    }
+                    if (res != DecodeResult::Ok) break;
                 }
-                if (res == DecodeResult::EndOfFile) {
-                    eof_.store(true);
-                    state_.playing.store(false);
-                    break;
-                }
-                if (res != DecodeResult::Ok) break;
+            }
+            if (any_eof) {
+                eof_.store(true);
+                state_.playing.store(false);
             }
         }
 
@@ -184,9 +270,14 @@ void Deck::prefetch_loop() {
         {
             std::unique_lock<std::mutex> lock(prefetch_mutex_);
             prefetch_cv_.wait_for(lock, std::chrono::milliseconds(20),
-                [this] { return !prefetch_run_.load() ||
-                                seek_pending_.load() ||
-                                ring_.write_available() > DECK_RING_CAP / 2; });
+                [this] {
+                    if (!prefetch_run_.load() || seek_pending_.load()) return true;
+                    // Wake if any active decoder needs filling
+                    for (int i = 0; i < 4; ++i) {
+                        if (decoders_[i] && rings_[i].write_available() > DECK_RING_CAP / 2) return true;
+                    }
+                    return false;
+                });
         }
     }
 }

@@ -58,9 +58,12 @@ export function WaveformCanvas({
       return;
     }
 
-    const { num_bins, peaks_max, total_frames } = waveform;
+    const { num_bins, peaks_max, stem_peaks, total_frames } = waveform;
     const midY    = h / 2;
     const binW    = w / num_bins;
+
+    // Stem colours: Vocals (Blue), Drums (Red), Bass (Yellow), Other (Green)
+    const stemColors = ["#3b82f6", "#ef4444", "#eab308", "#22c55e"];
 
     // Draw waveform bars.
     for (let i = 0; i < num_bins; i++) {
@@ -74,10 +77,41 @@ export function WaveformCanvas({
 
       // Accent fill proportional to amplitude.
       if (barH > 0.5) {
-        // Opacity scales with amplitude for a depth effect.
-        const alpha = 0.35 + amplitude * 0.65;
-        ctx.fillStyle = hexToRgba(accentColor, alpha);
-        ctx.fillRect(x, midY - barH, binW - 0.5, barH * 2);
+        if (stem_peaks) {
+          // Render stacked stems
+          const v = stem_peaks[0][i];
+          const d = stem_peaks[1][i];
+          const b = stem_peaks[2][i];
+          const o = stem_peaks[3][i];
+          const sum = v + d + b + o;
+          
+          if (sum > 0) {
+            let currentYTop = midY - barH;
+            let currentYBot = midY;
+            
+            const stems = [v, d, b, o];
+            for (let s = 0; s < 4; s++) {
+              const fraction = stems[s] / sum;
+              const segH = barH * fraction;
+              if (segH > 0.5) {
+                const alpha = 0.35 + amplitude * 0.65;
+                ctx.fillStyle = hexToRgba(stemColors[s], alpha);
+                // Draw top half
+                ctx.fillRect(x, currentYTop, binW - 0.5, segH);
+                // Draw bottom half
+                ctx.fillRect(x, currentYBot, binW - 0.5, segH);
+                
+                currentYTop += segH;
+                currentYBot += segH;
+              }
+            }
+          }
+        } else {
+          // Standard single-colour waveform
+          const alpha = 0.35 + amplitude * 0.65;
+          ctx.fillStyle = hexToRgba(accentColor, alpha);
+          ctx.fillRect(x, midY - barH, binW - 0.5, barH * 2);
+        }
       }
     }
 

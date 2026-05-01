@@ -2,9 +2,27 @@
 name        = "pdj-stems"
 version     = "0.0.1"
 edition     = "2021"
+description = "AI stem separation (HTDemucs) for PhraseDJ"
 
 [dependencies]
-pdj-core  = { path = "../pdj-core" }
-serde     = { workspace = true }
-thiserror = { workspace = true }
-tracing   = { workspace = true }
+pdj-core   = { path = "../pdj-core" }
+serde      = { workspace = true }
+thiserror  = { workspace = true }
+tracing    = { workspace = true }
+tokio      = { workspace = true }
+uuid       = { workspace = true }
+
+# Async broadcast channel (multi-producer, multi-consumer).
+# Used by the job queue to push status events to subscribers.
+async-broadcast = { workspace = true }
+
+# Number of logical / performance CPU cores – used to cap parallel jobs.
+num_cpus = { workspace = true }
+
+# WAV/FLAC writing for stem output files.
+# Phase 2: writes WAV; will switch to FLAC encoder when packaged.
+hound = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
+tokio    = { workspace = true }
