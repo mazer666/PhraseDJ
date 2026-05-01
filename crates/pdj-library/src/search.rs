@@ -13,13 +13,13 @@ use crate::schema::{AnalysisState, StemsState, Track};
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Query {
     /// Free-text fragment matched against title / artist / album.
-    pub text:    Option<String>,
+    pub text: Option<String>,
     /// Inclusive minimum BPM.
     pub bpm_min: Option<f32>,
     /// Inclusive maximum BPM.
     pub bpm_max: Option<f32>,
     /// Maximum number of rows returned (default 200).
-    pub limit:   Option<u32>,
+    pub limit: Option<u32>,
 }
 
 /// Run a search.
@@ -56,28 +56,31 @@ pub fn search(lib: &Library, q: &Query) -> Result<Vec<Track>> {
         .map_err(|e| pdj_core::Error::Database(e.to_string()))?;
 
     // Convert Vec<Value> into a slice of &dyn ToSql via params_from_iter.
-    let rows = stmt.query_map(rusqlite::params_from_iter(args.iter()),
-        |row| -> rusqlite::Result<Track> {
-        let id_s: String = row.get(0)?;
-        let id = pdj_core::TrackId::parse(&id_s).map_err(|e|
-            rusqlite::Error::FromSqlConversionFailure(
-                0, rusqlite::types::Type::Text, Box::new(e)))?;
-        Ok(Track {
-            id,
-            path:           row.get(1)?,
-            rel_path:       row.get(2)?,
-            title:          row.get(3)?,
-            artist:         row.get(4)?,
-            album:          row.get(5)?,
-            duration_ms:    row.get(6)?,
-            bpm:            row.get(7)?,
-            key:            row.get(8)?,
-            imported_at:    row.get(9)?,
-            analyzed_at:    row.get(10)?,
-            analysis_state: AnalysisState::parse(&row.get::<_, String>(11)?),
-            stems_state:    StemsState::parse(&row.get::<_, String>(12)?),
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(args.iter()), |row| {
+            -> rusqlite::Result<Track> {
+                let id_s: String = row.get(0)?;
+                let id = pdj_core::TrackId::parse(&id_s).map_err(|e| {
+                    rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+                })?;
+                Ok(Track {
+                    id,
+                    path: row.get(1)?,
+                    rel_path: row.get(2)?,
+                    title: row.get(3)?,
+                    artist: row.get(4)?,
+                    album: row.get(5)?,
+                    duration_ms: row.get(6)?,
+                    bpm: row.get(7)?,
+                    key: row.get(8)?,
+                    imported_at: row.get(9)?,
+                    analyzed_at: row.get(10)?,
+                    analysis_state: AnalysisState::parse(&row.get::<_, String>(11)?),
+                    stems_state: StemsState::parse(&row.get::<_, String>(12)?),
+                })
+            }
         })
-    }).map_err(|e| pdj_core::Error::Database(e.to_string()))?;
+        .map_err(|e| pdj_core::Error::Database(e.to_string()))?;
 
     let mut out = Vec::new();
     for r in rows {

@@ -28,13 +28,13 @@ const AUDIO_EXTENSIONS: &[&str] = &[
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ScanReport {
     /// Number of files added to the library.
-    pub added:     u32,
+    pub added: u32,
     /// Number of files skipped because they were already present.
     pub duplicate: u32,
     /// Number of files skipped because of an unsupported extension.
-    pub skipped:   u32,
+    pub skipped: u32,
     /// Errors encountered (path + reason).
-    pub errors:    Vec<String>,
+    pub errors: Vec<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -71,11 +71,19 @@ pub fn import_file(lib: &Library, path: impl AsRef<Path>) -> Result<ImportOutcom
 
     // Check for an existing row with this path.
     let path_str = path.to_string_lossy().to_string();
-    let existing: Option<String> = lib.conn()
-        .query_row("SELECT id FROM tracks WHERE path = ?",
-                   [&path_str], |r| r.get(0))
+    let existing: Option<String> = lib
+        .conn()
+        .query_row("SELECT id FROM tracks WHERE path = ?", [&path_str], |r| {
+            r.get(0)
+        })
         .map_or_else(
-            |e| if matches!(e, rusqlite::Error::QueryReturnedNoRows) { Ok(None) } else { Err(e) },
+            |e| {
+                if matches!(e, rusqlite::Error::QueryReturnedNoRows) {
+                    Ok(None)
+                } else {
+                    Err(e)
+                }
+            },
             |s: String| Ok(Some(s)),
         )
         .map_err(|e| pdj_core::Error::Database(e.to_string()))?;
@@ -138,7 +146,7 @@ fn visit_file(lib: &Library, path: &Path, report: &mut ScanReport) {
         return;
     }
     match import_file(lib, path) {
-        Ok(ImportOutcome::Added(_))    => report.added += 1,
+        Ok(ImportOutcome::Added(_)) => report.added += 1,
         Ok(ImportOutcome::Existing(_)) => report.duplicate += 1,
         Err(e) => {
             warn!(?path, %e, "import failed");

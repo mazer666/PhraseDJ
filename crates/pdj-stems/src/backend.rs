@@ -45,9 +45,9 @@ impl StemLabel {
     pub fn as_str(self) -> &'static str {
         match self {
             StemLabel::Vocals => "vocals",
-            StemLabel::Drums  => "drums",
-            StemLabel::Bass   => "bass",
-            StemLabel::Other  => "other",
+            StemLabel::Drums => "drums",
+            StemLabel::Bass => "bass",
+            StemLabel::Other => "other",
         }
     }
 }
@@ -162,16 +162,16 @@ mod tests {
         // These strings are used as directory names in the cache.
         // Changing them would break existing user caches — keep stable.
         assert_eq!(StemLabel::Vocals.as_str(), "vocals");
-        assert_eq!(StemLabel::Drums.as_str(),  "drums");
-        assert_eq!(StemLabel::Bass.as_str(),   "bass");
-        assert_eq!(StemLabel::Other.as_str(),  "other");
+        assert_eq!(StemLabel::Drums.as_str(), "drums");
+        assert_eq!(StemLabel::Bass.as_str(), "bass");
+        assert_eq!(StemLabel::Other.as_str(), "other");
     }
 
     #[test]
     fn pcm_frame_count_matches_samples_divided_by_channels() {
         let buf = PcmBuffer {
-            samples:     vec![0.0_f32; 200],
-            channels:    2,
+            samples: vec![0.0_f32; 200],
+            channels: 2,
             sample_rate: 44_100,
         };
         // 200 samples / 2 channels = 100 frames

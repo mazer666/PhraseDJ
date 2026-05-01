@@ -101,7 +101,8 @@ impl Library {
                 return Err(LibraryError::UnsupportedSchema {
                     found: v,
                     supported: CURRENT_VERSION,
-                }.into());
+                }
+                .into());
             }
             Some(_) => {
                 // Future migrations will go here.  Phase 1 has only v1.
@@ -115,29 +116,31 @@ impl Library {
 
     /// Insert a track row.  Returns the assigned id.
     pub fn insert_track(&self, track: &Track) -> Result<TrackId> {
-        self.conn.execute(
-            "INSERT INTO tracks (
+        self.conn
+            .execute(
+                "INSERT INTO tracks (
                 id, path, rel_path, title, artist, album,
                 duration_ms, bpm, key,
                 imported_at, analyzed_at,
                 analysis_state, stems_state
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            params![
-                track.id.to_string(),
-                track.path,
-                track.rel_path,
-                track.title,
-                track.artist,
-                track.album,
-                track.duration_ms,
-                track.bpm,
-                track.key,
-                track.imported_at,
-                track.analyzed_at,
-                track.analysis_state.as_str(),
-                track.stems_state.as_str(),
-            ],
-        ).map_err(LibraryError::Sqlite)?;
+                params![
+                    track.id.to_string(),
+                    track.path,
+                    track.rel_path,
+                    track.title,
+                    track.artist,
+                    track.album,
+                    track.duration_ms,
+                    track.bpm,
+                    track.key,
+                    track.imported_at,
+                    track.analyzed_at,
+                    track.analysis_state.as_str(),
+                    track.stems_state.as_str(),
+                ],
+            )
+            .map_err(LibraryError::Sqlite)?;
         Ok(track.id)
     }
 
@@ -168,37 +171,44 @@ impl Library {
                     analysis_state, stems_state
              FROM tracks ORDER BY imported_at DESC LIMIT ?",
         ).map_err(LibraryError::Sqlite)?;
-        let rows = stmt.query_map(params![limit], row_to_track)
+        let rows = stmt
+            .query_map(params![limit], row_to_track)
             .map_err(LibraryError::Sqlite)?;
         let mut out = Vec::new();
-        for r in rows { out.push(r.map_err(LibraryError::Sqlite)?); }
+        for r in rows {
+            out.push(r.map_err(LibraryError::Sqlite)?);
+        }
         Ok(out)
     }
 
     /// Update analysis fields after the engine has finished BPM detection.
     pub fn set_bpm(&self, id: TrackId, bpm: f32) -> Result<()> {
-        self.conn.execute(
-            "UPDATE tracks
-                SET bpm            = ?,
+        self.conn
+            .execute(
+                "UPDATE tracks
+                SET bpm = ?,
                     analysis_state = ?,
-                    analyzed_at    = ?
-              WHERE id             = ?",
-            params![
-                bpm,
-                AnalysisState::Beatgrid.as_str(),
-                schema::now_unix_ms(),
-                id.to_string(),
-            ],
-        ).map_err(LibraryError::Sqlite)?;
+                    analyzed_at = ?
+              WHERE id = ?",
+                params![
+                    bpm,
+                    AnalysisState::Beatgrid.as_str(),
+                    schema::now_unix_ms(),
+                    id.to_string(),
+                ],
+            )
+            .map_err(LibraryError::Sqlite)?;
         Ok(())
     }
 
     /// Update stems-cache state after the analyser finishes.
     pub fn set_stems_state(&self, id: TrackId, state: StemsState) -> Result<()> {
-        self.conn.execute(
-            "UPDATE tracks SET stems_state = ? WHERE id = ?",
-            params![state.as_str(), id.to_string()],
-        ).map_err(LibraryError::Sqlite)?;
+        self.conn
+            .execute(
+                "UPDATE tracks SET stems_state = ? WHERE id = ?",
+                params![state.as_str(), id.to_string()],
+            )
+            .map_err(LibraryError::Sqlite)?;
         Ok(())
     }
 
@@ -234,18 +244,18 @@ fn row_to_track(row: &rusqlite::Row<'_>) -> rusqlite::Result<Track> {
         rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e)))?;
     Ok(Track {
         id,
-        path:           row.get(1)?,
-        rel_path:       row.get(2)?,
-        title:          row.get(3)?,
-        artist:         row.get(4)?,
-        album:          row.get(5)?,
-        duration_ms:    row.get(6)?,
-        bpm:            row.get(7)?,
-        key:            row.get(8)?,
-        imported_at:    row.get(9)?,
-        analyzed_at:    row.get(10)?,
+        path: row.get(1)?,
+        rel_path: row.get(2)?,
+        title: row.get(3)?,
+        artist: row.get(4)?,
+        album: row.get(5)?,
+        duration_ms: row.get(6)?,
+        bpm: row.get(7)?,
+        key: row.get(8)?,
+        imported_at: row.get(9)?,
+        analyzed_at: row.get(10)?,
         analysis_state: AnalysisState::parse(&row.get::<_, String>(11)?),
-        stems_state:    StemsState::parse(&row.get::<_, String>(12)?),
+        stems_state: StemsState::parse(&row.get::<_, String>(12)?),
     })
 }
 

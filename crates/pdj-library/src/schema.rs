@@ -68,10 +68,10 @@ pub enum AnalysisState {
 impl AnalysisState {
     pub fn as_str(self) -> &'static str {
         match self {
-            AnalysisState::Raw      => "raw",
+            AnalysisState::Raw => "raw",
             AnalysisState::Beatgrid => "beatgrid",
-            AnalysisState::Full     => "full",
-            AnalysisState::Failed   => "failed",
+            AnalysisState::Full => "full",
+            AnalysisState::Failed => "failed",
         }
     }
     pub fn parse(s: &str) -> Self {
@@ -99,8 +99,8 @@ impl StemsState {
         match self {
             StemsState::Pending => "pending",
             StemsState::Running => "running",
-            StemsState::Cached  => "cached",
-            StemsState::Failed  => "failed",
+            StemsState::Cached => "cached",
+            StemsState::Failed => "failed",
         }
     }
     pub fn parse(s: &str) -> Self {
@@ -116,38 +116,38 @@ impl StemsState {
 /// One row in the `tracks` table.  Optional fields mirror SQL nullability.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Track {
-    pub id:              TrackId,
-    pub path:            String,
-    pub rel_path:        Option<String>,
-    pub title:           Option<String>,
-    pub artist:          Option<String>,
-    pub album:           Option<String>,
-    pub duration_ms:     Option<u64>,
-    pub bpm:             Option<f32>,
-    pub key:             Option<String>,
-    pub imported_at:     i64,
-    pub analyzed_at:     Option<i64>,
-    pub analysis_state:  AnalysisState,
-    pub stems_state:     StemsState,
+    pub id: TrackId,
+    pub path: String,
+    pub rel_path: Option<String>,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub duration_ms: Option<u64>,
+    pub bpm: Option<f32>,
+    pub key: Option<String>,
+    pub imported_at: i64,
+    pub analyzed_at: Option<i64>,
+    pub analysis_state: AnalysisState,
+    pub stems_state: StemsState,
 }
 
 impl Track {
     /// Build a minimal Track for a freshly imported file.
     pub fn new_from_path(path: impl Into<String>) -> Self {
         Self {
-            id:             TrackId::new(),
-            path:           path.into(),
-            rel_path:       None,
-            title:          None,
-            artist:         None,
-            album:          None,
-            duration_ms:    None,
-            bpm:            None,
-            key:            None,
-            imported_at:    now_unix_ms(),
-            analyzed_at:    None,
+            id: TrackId::new(),
+            path: path.into(),
+            rel_path: None,
+            title: None,
+            artist: None,
+            album: None,
+            duration_ms: None,
+            bpm: None,
+            key: None,
+            imported_at: now_unix_ms(),
+            analyzed_at: None,
             analysis_state: AnalysisState::Raw,
-            stems_state:    StemsState::Pending,
+            stems_state: StemsState::Pending,
         }
     }
 }
