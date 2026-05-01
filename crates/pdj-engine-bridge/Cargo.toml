@@ -2,9 +2,14 @@
 name        = "pdj-engine-bridge"
 version     = "0.0.1"
 edition     = "2021"
+description = "Safe Rust facade over the C++ pdj_audio engine"
+build       = "build.rs"
 
 [dependencies]
 pdj-core  = { path = "../pdj-core" }
 serde     = { workspace = true }
 thiserror = { workspace = true }
 tracing   = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

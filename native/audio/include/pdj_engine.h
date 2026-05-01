@@ -112,12 +112,42 @@ void pdj_engine_set_stem_gain(PdjEngine* engine,
                                uint32_t   stem_index,
                                float      value);
 
+/** Set the master output gain (0.0 = mute, 1.0 = unity). */
+void pdj_engine_set_master_gain(PdjEngine* engine, float value);
+
 /* -------------------------------------------------------------------------
-   Status query
+   Status queries
 ------------------------------------------------------------------------- */
 
 /** Returns 1 if the deck is currently playing, 0 otherwise. */
 int pdj_engine_is_playing(PdjEngine* engine, uint32_t deck_index);
+
+/** Returns 1 if a file is loaded on the deck, 0 otherwise. */
+int pdj_engine_is_loaded(PdjEngine* engine, uint32_t deck_index);
+
+/** Returns 1 if the audio output stream is running, 0 otherwise. */
+int pdj_engine_is_running(PdjEngine* engine);
+
+/* -------------------------------------------------------------------------
+   BPM analysis  (run on a background thread, not in the audio callback)
+------------------------------------------------------------------------- */
+
+/**
+ * Detect BPM from raw PCM samples and store the beatgrid for a deck.
+ *
+ * `samples` is interleaved stereo float, `frame_count` stereo frames.
+ * This is a blocking call — run it from a worker thread, not the UI thread.
+ */
+PdjResult pdj_engine_analyse_bpm(PdjEngine*   engine,
+                                   uint32_t     deck_index,
+                                   const float* samples,
+                                   uint64_t     frame_count);
+
+/**
+ * Return the last detected BPM for a deck.
+ * Returns 0.0 if no analysis has been performed yet.
+ */
+float pdj_engine_get_bpm(PdjEngine* engine, uint32_t deck_index);
 
 #ifdef __cplusplus
 } /* extern "C" */

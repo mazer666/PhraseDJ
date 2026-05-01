@@ -31,7 +31,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Async runtime (used for Tauri commands that need async I/O).
 tokio = { version = "1", features = ["rt", "macros"] }
 
-# Shared PhraseDJ types and settings loader.
-pdj-core = { path = "../../../crates/pdj-core" }
+# OS-specific paths.
+directories = { workspace = true }
+
+# Serialisation for Tauri command return values.
+serde      = { workspace = true }
+serde_json = { workspace = true }
+
+# PhraseDJ crates.
+pdj-core           = { path = "../../../crates/pdj-core" }
+pdj-engine-bridge  = { path = "../../../crates/pdj-engine-bridge" }
+pdj-library        = { path = "../../../crates/pdj-library" }
 
 # Profile settings belong in the workspace root Cargo.toml, not here.

@@ -1,3 +1,13 @@
-// Vitest setup file.
-// Add global test utilities here as the project grows.
-// Currently empty – imported by vite.config.ts `setupFiles`.
+// Vitest global setup — imported by vite.config.ts `setupFiles`.
+// Stubs Tauri APIs so tests can run in jsdom without a real Tauri host.
+
+// Stub the Tauri core `invoke` so tests don't blow up on import.
+// Individual tests override this via vi.mocked(invoke).mockResolvedValue(...)
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Stub the dialog plugin.
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  open: vi.fn().mockResolvedValue(null),
+}));

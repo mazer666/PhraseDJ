@@ -1,72 +1,101 @@
 /**
- * engine.cpp — Phase 0 stub implementation of the PhraseDJ audio engine.
+ * engine.cpp — PhraseDJ audio engine: implements the C ABI from pdj_engine.h.
  *
- * This file implements the C ABI declared in pdj_engine.h.  In Phase 0 all
- * functions exist but don't produce audio — that work begins in Phase 1 when
- * the CoreAudio / PortAudio backend is wired in.
+ * This file ties together the Decoder, Deck, Mixer, and PortAudioBackend.
+ * It owns all the C++ objects and exposes only the C ABI to Rust.
  *
- * The goal of Phase 0 is:
- *   1. The C ABI compiles cleanly with strict warnings.
- *   2. GoogleTest tests run and pass.
- *   3. Rust's pdj-engine-bridge can link against the shared library.
- *
- * Realtime-audio rules (enforced from Phase 1 onwards):
- *   - No allocations inside the audio callback.
- *   - No mutexes or blocking calls.
- *   - No I/O (file, log, network).
- * Violations here in Phase 0 are acceptable because no audio callback
- * runs yet.
+ * Thread model (see specs/02-audio-engine.md):
+ *   - Audio callback: RT, managed by PortAudio.
+ *   - Prefetch threads: one per deck, managed by Deck.
+ *   - Caller thread: anything — all public C-ABI setters are atomic.
  */
 
-#include "pdj_engine.h"
+#include "../include/pdj_engine.h"
+
+#include "bpm.hpp"
+#include "deck.hpp"
+#include "mixer.hpp"
+#include "portaudio_backend.hpp"
 
 #include <array>
 #include <atomic>
-#include <cstdlib>
 #include <cstring>
+#include <memory>
+#include <mutex>
+#include <string>
 
-namespace {
+// ---------------------------------------------------------------------------
+// PdjEngine struct — the opaque handle returned to callers
+// ---------------------------------------------------------------------------
 
-// Maximum number of decks supported.
-constexpr uint32_t MAX_DECKS = 2;
-
-// Per-deck state held inside the engine.
-struct DeckState {
-    std::atomic<bool>     playing{false};
-    std::atomic<uint64_t> position{0};   // frames
-    std::atomic<float>    fader{1.0f};
-    // Per-stem gains: 0=vocals 1=drums 2=bass 3=other.
-    std::array<std::atomic<float>, 4> stem_gain;
-
-    DeckState() {
-        for (auto& g : stem_gain) { g.store(1.0f); }
-    }
-};
-
-// The engine's internal state.
 struct PdjEngine {
     PdjEngineConfig config;
-    std::array<DeckState, MAX_DECKS> decks;
+
+    // Two decks.
+    std::array<std::unique_ptr<pdj::Deck>, 2> decks;
+
+    // Mixer that sums the decks.
+    std::unique_ptr<pdj::Mixer> mixer;
+
+    // Audio output backend.
+    std::unique_ptr<pdj::PortAudioBackend> backend;
+
+    // BPM result per deck (set after analysis; read by the UI).
+    std::array<pdj::BeatgridResult, 2> beatgrids;
+
+    // Mutex protects beatgrids and non-RT control operations.
+    std::mutex control_mutex;
+
+    // Per-deck crossfader position (exposed via setter).
     std::atomic<float> crossfader{0.5f};
 
     explicit PdjEngine(const PdjEngineConfig& cfg) : config(cfg) {}
 };
 
-// Validate deck_index and return PdjResult_InvalidArg if out of range.
-PdjResult check_deck(uint32_t deck_index) {
-    return (deck_index < MAX_DECKS) ? PdjResult_Ok : PdjResult_InvalidArg;
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-} // anonymous namespace
+static bool valid_deck(const PdjEngine* e, uint32_t idx) {
+    return e != nullptr && idx < 2;
+}
 
 // ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
 
 PdjEngine* pdj_engine_create(const PdjEngineConfig* config) {
-    if (!config) { return nullptr; }
-    // Phase 0: no real audio device opened yet.
-    return new PdjEngine(*config);
+    if (!config) return nullptr;
+
+    auto* e = new PdjEngine(*config);
+
+    // Create two decks.
+    for (int i = 0; i < 2; ++i) {
+        e->decks[i] = std::make_unique<pdj::Deck>();
+    }
+
+    // Create the mixer with raw deck pointers.
+    std::array<pdj::Deck*, 2> deck_ptrs = {
+        e->decks[0].get(), e->decks[1].get()
+    };
+    e->mixer = std::make_unique<pdj::Mixer>(deck_ptrs);
+
+    // Open PortAudio output.
+    e->backend = std::make_unique<pdj::PortAudioBackend>();
+    const auto result = e->backend->open(
+        e->mixer.get(),
+        config->sample_rate,
+        config->buffer_size,
+        "");  // empty = system default device
+
+    if (result != pdj::BackendResult::Ok) {
+        // Audio device unavailable (headless environment, CI, etc.).
+        // Engine still works for deck control — just no sound.
+        // Callers can check pdj_engine_is_running().
+        delete e->backend.release();
+    }
+
+    return e;
 }
 
 void pdj_engine_destroy(PdjEngine* engine) {
@@ -74,46 +103,47 @@ void pdj_engine_destroy(PdjEngine* engine) {
 }
 
 // ---------------------------------------------------------------------------
-// Deck control
+// Track loading
 // ---------------------------------------------------------------------------
 
 PdjResult pdj_engine_load(PdjEngine*  engine,
                            uint32_t    deck_index,
                            const char* file_path) {
-    if (!engine || !file_path) { return PdjResult_InvalidArg; }
-    if (auto r = check_deck(deck_index); r != PdjResult_Ok) { return r; }
-    // Phase 0: no decoder; file path accepted but not used.
-    engine->decks[deck_index].position.store(0);
-    engine->decks[deck_index].playing.store(false);
-    return PdjResult_Ok;
+    if (!file_path) return PdjResult_InvalidArg;
+    if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
+
+    const bool ok = engine->decks[deck_index]->load(
+        std::string(file_path), engine->config.sample_rate);
+    return ok ? PdjResult_Ok : PdjResult_Io;
 }
 
+// ---------------------------------------------------------------------------
+// Transport
+// ---------------------------------------------------------------------------
+
 PdjResult pdj_engine_play(PdjEngine* engine, uint32_t deck_index) {
-    if (!engine) { return PdjResult_InvalidArg; }
-    if (auto r = check_deck(deck_index); r != PdjResult_Ok) { return r; }
-    engine->decks[deck_index].playing.store(true);
+    if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
+    engine->decks[deck_index]->play();
     return PdjResult_Ok;
 }
 
 PdjResult pdj_engine_pause(PdjEngine* engine, uint32_t deck_index) {
-    if (!engine) { return PdjResult_InvalidArg; }
-    if (auto r = check_deck(deck_index); r != PdjResult_Ok) { return r; }
-    engine->decks[deck_index].playing.store(false);
+    if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
+    engine->decks[deck_index]->pause();
     return PdjResult_Ok;
 }
 
 PdjResult pdj_engine_seek(PdjEngine* engine,
                            uint32_t   deck_index,
                            uint64_t   position_frames) {
-    if (!engine) { return PdjResult_InvalidArg; }
-    if (auto r = check_deck(deck_index); r != PdjResult_Ok) { return r; }
-    engine->decks[deck_index].position.store(position_frames);
+    if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
+    engine->decks[deck_index]->seek(position_frames);
     return PdjResult_Ok;
 }
 
 uint64_t pdj_engine_position(PdjEngine* engine, uint32_t deck_index) {
-    if (!engine || deck_index >= MAX_DECKS) { return 0; }
-    return engine->decks[deck_index].position.load();
+    if (!valid_deck(engine, deck_index)) return 0;
+    return engine->decks[deck_index]->position();
 }
 
 // ---------------------------------------------------------------------------
@@ -121,29 +151,72 @@ uint64_t pdj_engine_position(PdjEngine* engine, uint32_t deck_index) {
 // ---------------------------------------------------------------------------
 
 void pdj_engine_set_fader(PdjEngine* engine, uint32_t deck_index, float value) {
-    if (!engine || deck_index >= MAX_DECKS) { return; }
-    engine->decks[deck_index].fader.store(value);
+    if (!valid_deck(engine, deck_index)) return;
+    engine->decks[deck_index]->set_gain(value);
 }
 
 void pdj_engine_set_crossfader(PdjEngine* engine, float value) {
-    if (!engine) { return; }
+    if (!engine) return;
     engine->crossfader.store(value);
+    if (engine->mixer) engine->mixer->set_crossfader(value);
 }
 
 void pdj_engine_set_stem_gain(PdjEngine* engine,
                                uint32_t   deck_index,
                                uint32_t   stem_index,
                                float      value) {
-    if (!engine || deck_index >= MAX_DECKS) { return; }
-    if (stem_index >= 4) { return; }
-    engine->decks[deck_index].stem_gain[stem_index].store(value);
+    if (!valid_deck(engine, deck_index)) return;
+    if (stem_index >= 4) return;
+    engine->decks[deck_index]->set_stem_gain(
+        static_cast<int>(stem_index), value);
+}
+
+void pdj_engine_set_master_gain(PdjEngine* engine, float value) {
+    if (!engine || !engine->mixer) return;
+    engine->mixer->set_master_gain(value);
 }
 
 // ---------------------------------------------------------------------------
-// Status
+// Status queries
 // ---------------------------------------------------------------------------
 
 int pdj_engine_is_playing(PdjEngine* engine, uint32_t deck_index) {
-    if (!engine || deck_index >= MAX_DECKS) { return 0; }
-    return engine->decks[deck_index].playing.load() ? 1 : 0;
+    if (!valid_deck(engine, deck_index)) return 0;
+    return engine->decks[deck_index]->is_playing() ? 1 : 0;
+}
+
+int pdj_engine_is_loaded(PdjEngine* engine, uint32_t deck_index) {
+    if (!valid_deck(engine, deck_index)) return 0;
+    return engine->decks[deck_index]->is_loaded() ? 1 : 0;
+}
+
+int pdj_engine_is_running(PdjEngine* engine) {
+    if (!engine || !engine->backend) return 0;
+    return engine->backend->is_running() ? 1 : 0;
+}
+
+// ---------------------------------------------------------------------------
+// BPM analysis
+// ---------------------------------------------------------------------------
+
+PdjResult pdj_engine_analyse_bpm(PdjEngine*  engine,
+                                   uint32_t    deck_index,
+                                   const float* samples,
+                                   uint64_t     frame_count) {
+    if (!valid_deck(engine, deck_index)) return PdjResult_InvalidArg;
+    if (!samples || frame_count == 0) return PdjResult_InvalidArg;
+
+    auto result = pdj::detect_bpm(samples, frame_count,
+                                    engine->config.sample_rate);
+    {
+        std::lock_guard<std::mutex> lk(engine->control_mutex);
+        engine->beatgrids[deck_index] = std::move(result);
+    }
+    return PdjResult_Ok;
+}
+
+float pdj_engine_get_bpm(PdjEngine* engine, uint32_t deck_index) {
+    if (!valid_deck(engine, deck_index)) return 0.0f;
+    std::lock_guard<std::mutex> lk(engine->control_mutex);
+    return engine->beatgrids[deck_index].bpm;
 }
