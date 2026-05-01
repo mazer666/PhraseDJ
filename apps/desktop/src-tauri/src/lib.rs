@@ -24,9 +24,9 @@ use crate::state::AppState;
 #[derive(Debug, Clone, Serialize)]
 struct StemEvent {
     track_id: String,
-    status:   String,        // "pending" | "running" | "cached" | "failed"
-    progress: Option<f32>,   // only set when status == "running"
-    reason:   Option<String>, // only set when status == "failed"
+    status: String,         // "pending" | "running" | "cached" | "failed"
+    progress: Option<f32>,  // only set when status == "running"
+    reason: Option<String>, // only set when status == "failed"
 }
 
 /// Initialise logging and start the Tauri event loop.
@@ -119,27 +119,33 @@ async fn forward_stem_events(
                 let event = match &status {
                     StemStatus::Pending => StemEvent {
                         track_id: track_id.to_string(),
-                        status:   "pending".into(),
+                        status: "pending".into(),
                         progress: None,
-                        reason:   None,
+                        reason: None,
+                    },
+                    StemStatus::ModelDownloading { progress } => StemEvent {
+                        track_id: track_id.to_string(),
+                        status: "model_downloading".into(),
+                        progress: Some(*progress),
+                        reason: None,
                     },
                     StemStatus::Running { progress } => StemEvent {
                         track_id: track_id.to_string(),
-                        status:   "running".into(),
+                        status: "running".into(),
                         progress: Some(*progress),
-                        reason:   None,
+                        reason: None,
                     },
                     StemStatus::Cached { .. } => StemEvent {
                         track_id: track_id.to_string(),
-                        status:   "cached".into(),
+                        status: "cached".into(),
                         progress: None,
-                        reason:   None,
+                        reason: None,
                     },
                     StemStatus::Failed { reason } => StemEvent {
                         track_id: track_id.to_string(),
-                        status:   "failed".into(),
+                        status: "failed".into(),
                         progress: None,
-                        reason:   Some(reason.clone()),
+                        reason: Some(reason.clone()),
                     },
                 };
                 if let Err(e) = handle.emit("stem-status", event) {
