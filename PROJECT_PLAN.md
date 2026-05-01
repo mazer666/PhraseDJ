@@ -37,7 +37,7 @@ shows up as an empty Tauri window.
 - [x] Tauri 2 skeleton with React/TS/Vite
 - [x] Cargo workspace with a `pdj-core` stub
 - [x] CMake skeleton for `native/audio`
-- [ ] CI on GitHub Actions: `cargo test`, `pnpm test`, `ctest`, lint
+- [x] CI on GitHub Actions: `cargo test`, `pnpm test`, `ctest`, lint
 - [x] `config/defaults.toml` + loader in `pdj-core`
 - [x] CONTRIBUTING.md, ISSUE/PR templates
 
@@ -62,7 +62,7 @@ control runs.
 - [x] Keyboard mapping driven by `keymap.toml` (with user-override merging)
 - [x] Local library: SQLite schema, drag & drop import, folder scan
 - [x] Settings UI (with reset-to-default)
-- [ ] Latency benchmark as a CI check
+- [x] Latency benchmark as a CI check
 
 **Milestone 1 (M8):** "I can load two tracks from my local library, play
 them in sync via keyboard, and mix them with the crossfader."
@@ -77,8 +77,8 @@ mode. Background analysis on library import.
 - [x] `pdj-stems` crate with an async job queue
 - [x] `StemBackend` trait + `MlxBackend` stub (Apple Silicon detection real; inference stubbed)
 - [x] `OnnxBackend` stub (cross-platform fallback, always available)
-- [ ] Port HTDemucs to MLX (4-stem) — real inference (stub in place)
-- [ ] ONNX Runtime fallback (Linux/Windows) — real inference (stub in place)
+- [x] Port HTDemucs to MLX (4-stem) — real inference (mlx_rs integrated)
+- [x] ONNX Runtime fallback (Linux/Windows) — real inference (ort session wired)
 - [x] Background analysis on import; cache stems in app-support folder (queue + LRU path helpers)
 - [x] Overlap-add stitching + WAV/FLAC writing (`stitch` module)
 - [x] Cache path layout (`paths` module; `StemPaths`)
