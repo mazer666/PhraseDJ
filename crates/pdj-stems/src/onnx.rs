@@ -46,7 +46,7 @@ impl OnnxBackend {
     /// is in place.
     pub fn new() -> Self {
         // Initialize ort environment (thread-safe, idempotent).
-        let _ = ort::init();
+        let _ = ort::init().commit();
         Self {
             session: Mutex::new(None),
         }

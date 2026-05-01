@@ -14,9 +14,10 @@ use pdj_core::{Error, Result};
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use directories::ProjectDirs;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use std::sync::Mutex;
 
-use crate::backend::{InferenceRequest, InferenceResult, PcmBuffer, StemBackend};
+use crate::backend::{InferenceRequest, InferenceResult, StemBackend};
 
 // ---------------------------------------------------------------------------
 // Platform detection
@@ -114,7 +115,7 @@ impl StemBackend for MlxBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::InferenceRequest;
+    use crate::backend::{InferenceRequest, PcmBuffer};
 
     fn make_request(frames: usize, channels: u16) -> InferenceRequest {
         InferenceRequest {
