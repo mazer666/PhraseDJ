@@ -28,7 +28,7 @@ use pdj_core::{types::TrackId, Error, Result};
 use tokio::sync::{Mutex, Semaphore};
 use tracing::{debug, error, info, warn};
 
-use crate::backend::{select_backend, InferenceRequest, PcmBuffer, StemLabel};
+use crate::backend::{select_backend, InferenceRequest, PcmBuffer};
 use crate::paths::{stem_cache_root, stem_paths_for, StemPaths};
 use crate::stitch::{write_stems_to_disk, Stitcher};
 

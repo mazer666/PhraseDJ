@@ -13,7 +13,7 @@
 use pdj_core::{Error, Result};
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-use mlx_rs::{Array, StreamOrDevice};
+use directories::ProjectDirs;
 use std::sync::Mutex;
 
 use crate::backend::{InferenceRequest, InferenceResult, PcmBuffer, StemBackend};
@@ -61,9 +61,9 @@ impl MlxBackend {
             .lock()
             .map_err(|e| Error::Settings(e.to_string()))?;
         if !*loaded {
-            let model_path = dirs::data_local_dir()
-                .unwrap_or_default()
-                .join("PhraseDJ/models/htdemucs.safetensors");
+            let model_path = ProjectDirs::from("io", "PhraseDJ", "PhraseDJ")
+                .map(|d| d.data_local_dir().join("models/htdemucs.safetensors"))
+                .unwrap_or_default();
 
             if !model_path.exists() {
                 return Err(Error::Settings(format!(

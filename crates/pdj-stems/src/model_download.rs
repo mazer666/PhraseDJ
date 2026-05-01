@@ -9,7 +9,7 @@ use std::path::Path;
 
 use futures_util::StreamExt;
 use pdj_core::{Error, Result};
-use tracing::{info, warn};
+use tracing::info;
 
 /// Official/Reliable URL for the HTDemucs ONNX model.
 /// Note: In a real production app, this would point to an official CDN.

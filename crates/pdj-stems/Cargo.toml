@@ -12,6 +12,8 @@ thiserror  = { workspace = true }
 tracing    = { workspace = true }
 tokio      = { workspace = true }
 uuid       = { workspace = true }
+dirs       = "5"
+directories = "5"
 
 # Async broadcast channel (multi-producer, multi-consumer).
 # Used by the job queue to push status events to subscribers.

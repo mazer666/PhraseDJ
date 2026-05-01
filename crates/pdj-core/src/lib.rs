@@ -12,5 +12,6 @@ pub mod error;
 pub mod types;
 
 // Re-export the most common items at the crate root for convenience.
+pub use config::{AudioSettings, LibrarySettings, LyricsSettings, NetworkSettings, Settings, StemsSettings, UiSettings};
 pub use error::{Error, Result};
 pub use types::TrackId;

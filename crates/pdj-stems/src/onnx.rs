@@ -1,6 +1,9 @@
 use ndarray::Array3;
-use ort::{GraphOptimizationLevel, Session};
+use ort::session::Session;
+use ort::session::builder::GraphOptimizationLevel;
+use ort::value::Value;
 use pdj_core::{Error, Result};
+use directories::ProjectDirs;
 /// ONNX Runtime backend for stem separation.
 ///
 /// # Why ONNX?
@@ -55,9 +58,9 @@ impl OnnxBackend {
             .lock()
             .map_err(|e| Error::Settings(e.to_string()))?;
         if guard.is_none() {
-            let model_path = dirs::data_local_dir()
-                .unwrap_or_default()
-                .join("PhraseDJ/models/htdemucs.onnx");
+            let model_path = ProjectDirs::from("io", "PhraseDJ", "PhraseDJ")
+                .map(|d| d.data_local_dir().join("models/htdemucs.onnx"))
+                .unwrap_or_default();
 
             if !model_path.exists() {
                 // If model doesn't exist, we fallback to returning an error which
@@ -134,10 +137,16 @@ impl StemBackend for OnnxBackend {
         let input_tensor = Array3::from_shape_vec((1, channels, frames), deinterleaved)
             .map_err(|e| Error::other(format!("Shape error: {}", e)))?;
 
-        let inputs = ort::inputs![input_tensor].map_err(|e| Error::other(e.to_string()))?;
+        // ort 2.0 requires explicit Value creation from ndarray if trait bounds aren't met automatically.
+        let input_value = Value::from_array(session.allocator(), &input_tensor)
+            .map_err(|e| Error::other(format!("Failed to create input tensor: {}", e)))?;
+
         let outputs = session
-            .run(inputs)
-            .map_err(|e| Error::other(e.to_string()))?;
+            .run(ort::inputs![input_value])
+            .map_err(|e| Error::other(format!("Inference failed: {}", e)))?;
+        
+        // ort 2.0 Session::run returns a Result<SessionOutputs, Error>. 
+        // SessionOutputs implements Index<usize> and returns an SessionOutputValue.
 
         // Extract [1, 4, channels, frames]
         let out_tensor = outputs[0]
