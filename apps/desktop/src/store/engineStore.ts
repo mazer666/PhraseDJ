@@ -32,6 +32,12 @@ interface EngineStore {
   setFader:      (deck: 0 | 1, value: number) => Promise<void>;
   setCrossfader: (value: number) => Promise<void>;
   setMasterGain: (value: number) => Promise<void>;
+  /** Sync a deck's tempo to the opposite deck's BPM. */
+  sync:    (deck: 0 | 1) => Promise<void>;
+  /** Nudge playback speed by a small delta (positive = faster). */
+  nudgeTempo: (deck: 0 | 1, delta: number) => Promise<void>;
+  /** Set playback speed ratio directly (1.0 = normal). */
+  setTempoRatio: (deck: 0 | 1, ratio: number) => Promise<void>;
 }
 
 const blankState = (deck: number): DeckState => ({
@@ -40,6 +46,7 @@ const blankState = (deck: number): DeckState => ({
   playing: false,
   position: 0,
   bpm: 0,
+  tempo_ratio: 1.0,
 });
 
 let pollHandle: number | null = null;
@@ -95,4 +102,10 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
     await mixerApi.setMasterGain(value);
     set({ masterGain: value });
   },
+
+  sync: (deck) => deckApi.sync(deck),
+
+  nudgeTempo: (deck, delta) => deckApi.nudgeTempo(deck, delta),
+
+  setTempoRatio: (deck, ratio) => deckApi.setTempoRatio(deck, ratio),
 }));

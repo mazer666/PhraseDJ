@@ -19,8 +19,9 @@ export interface AppStatus {
 }
 
 export const app = {
-  version: () => invoke<string>("app_version"),
-  status:  () => invoke<AppStatus>("app_status"),
+  version:    () => invoke<string>("app_version"),
+  status:     () => invoke<AppStatus>("app_status"),
+  keymapLoad: () => invoke<Record<string, string>>("keymap_load"),
 };
 
 // ---------------------------------------------------------------------------
@@ -33,6 +34,8 @@ export interface DeckState {
   playing: boolean;
   position: number;
   bpm: number;
+  /** Current playback speed ratio (1.0 = normal). */
+  tempo_ratio: number;
 }
 
 export const deckApi = {
@@ -43,6 +46,11 @@ export const deckApi = {
   seek:   (deck: number, position: number) =>
     invoke<void>("deck_seek", { deck, position }),
   state:  (deck: number) => invoke<DeckState>("deck_state", { deck }),
+  setTempoRatio: (deck: number, ratio: number) =>
+    invoke<void>("deck_set_tempo_ratio", { deck, ratio }),
+  sync:   (deck: number) => invoke<void>("deck_sync", { deck }),
+  nudgeTempo: (deck: number, delta: number) =>
+    invoke<void>("deck_nudge_tempo", { deck, delta }),
 };
 
 // ---------------------------------------------------------------------------

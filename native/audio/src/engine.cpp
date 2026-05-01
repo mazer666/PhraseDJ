@@ -220,3 +220,23 @@ float pdj_engine_get_bpm(PdjEngine* engine, uint32_t deck_index) {
     std::lock_guard<std::mutex> lk(engine->control_mutex);
     return engine->beatgrids[deck_index].bpm;
 }
+
+// ---------------------------------------------------------------------------
+// Tempo control
+// ---------------------------------------------------------------------------
+
+void pdj_engine_set_tempo_ratio(PdjEngine* engine,
+                                 uint32_t   deck_index,
+                                 float      ratio) {
+    if (!valid_deck(engine, deck_index)) return;
+    // Clamp to a sensible DJ range: ±50 % from original speed.
+    const float clamped = std::max(0.5f, std::min(2.0f, ratio));
+    engine->decks[deck_index]->set_pitch(clamped);
+}
+
+float pdj_engine_get_tempo_ratio(PdjEngine* engine, uint32_t deck_index) {
+    if (!valid_deck(engine, deck_index)) return 1.0f;
+    // state_.pitch is an atomic float; access it via the public setter's path.
+    // We expose a dedicated getter to avoid reaching into private members.
+    return engine->decks[deck_index]->get_pitch();
+}

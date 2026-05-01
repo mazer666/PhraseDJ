@@ -149,6 +149,25 @@ PdjResult pdj_engine_analyse_bpm(PdjEngine*   engine,
  */
 float pdj_engine_get_bpm(PdjEngine* engine, uint32_t deck_index);
 
+/* -------------------------------------------------------------------------
+   Tempo control  (vinyl-style: changes speed and pitch together)
+------------------------------------------------------------------------- */
+
+/**
+ * Set the playback speed ratio for a deck.
+ *
+ * 1.0 = original speed.  1.05 = 5 % faster.  0.95 = 5 % slower.
+ * Clamped internally to [0.5, 2.0].  Realtime-safe.
+ */
+void pdj_engine_set_tempo_ratio(PdjEngine* engine,
+                                 uint32_t   deck_index,
+                                 float      ratio);
+
+/**
+ * Return the current tempo ratio for a deck (default 1.0).
+ */
+float pdj_engine_get_tempo_ratio(PdjEngine* engine, uint32_t deck_index);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

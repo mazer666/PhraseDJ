@@ -82,6 +82,17 @@ extern "C" {
         frame_count: u64,
     ) -> PdjResult;
     pub fn pdj_engine_get_bpm(engine: *mut PdjEngine, deck_index: u32) -> c_float;
+
+    // Tempo control
+    pub fn pdj_engine_set_tempo_ratio(
+        engine: *mut PdjEngine,
+        deck_index: u32,
+        ratio: c_float,
+    );
+    pub fn pdj_engine_get_tempo_ratio(
+        engine: *mut PdjEngine,
+        deck_index: u32,
+    ) -> c_float;
 }
 
 // Make `*mut PdjEngine` Send + Sync so we can hold it inside Arc<Mutex<>>.

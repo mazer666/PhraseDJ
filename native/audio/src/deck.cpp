@@ -84,21 +84,61 @@ const AudioInfo* Deck::audio_info() const {
 uint32_t Deck::mix_into(float* out, uint32_t frames) noexcept {
     if (!state_.playing.load()) return 0;
 
-    // Pop from the ring buffer into our pre-allocated scratch.
-    const uint32_t to_read = std::min(frames, SCRATCH_FRAMES);
-    const std::size_t samples = ring_.pop(scratch_, to_read * 2);
-    const uint32_t frames_got = static_cast<uint32_t>(samples) / 2;
+    const float pitch = state_.pitch.load();
+    const float g     = state_.gain.load();
 
-    if (frames_got == 0) return 0;
-
-    // Apply channel gain and accumulate into the output buffer.
-    const float g = state_.gain.load();
-    for (uint32_t i = 0; i < frames_got * 2; ++i) {
-        out[i] += scratch_[i] * g;
+    // Fast path: no resampling when pitch is within 0.1 % of unity.
+    if (pitch >= 0.999f && pitch <= 1.001f) {
+        const uint32_t to_read = std::min(frames, SCRATCH_FRAMES);
+        const std::size_t samples = ring_.pop(scratch_, to_read * 2);
+        const uint32_t frames_got = static_cast<uint32_t>(samples) / 2;
+        if (frames_got == 0) return 0;
+        for (uint32_t i = 0; i < frames_got * 2; ++i) {
+            out[i] += scratch_[i] * g;
+        }
+        position_.fetch_add(frames_got);
+        return frames_got;
     }
 
-    position_.fetch_add(frames_got);
-    return frames_got;
+    // Resampling path: consume `pitch * frames` input frames from the ring
+    // buffer, then linearly interpolate them to produce exactly `frames`
+    // output frames.  This changes playback speed (and pitch, vinyl-style).
+    //
+    // pitch > 1.0 → faster (consumes more content per output frame)
+    // pitch < 1.0 → slower (consumes fewer content frames per output frame)
+    const uint32_t input_frames = std::min(
+        static_cast<uint32_t>(static_cast<float>(frames) * pitch + 0.5f),
+        SCRATCH_FRAMES);
+
+    const std::size_t popped = ring_.pop(scratch_, input_frames * 2);
+    const uint32_t got_frames = static_cast<uint32_t>(popped) / 2;
+    if (got_frames == 0) return 0;
+
+    // Derive the actual output count from what we really got.
+    const uint32_t out_frames = std::min(
+        static_cast<uint32_t>(static_cast<float>(got_frames) / pitch + 0.5f),
+        frames);
+    if (out_frames == 0) return 0;
+
+    // Linear interpolation: map each output frame back to a fractional
+    // input position and blend between the two surrounding samples.
+    const float step = static_cast<float>(got_frames) / static_cast<float>(out_frames);
+    float src = 0.0f;
+    for (uint32_t i = 0; i < out_frames; ++i, src += step) {
+        const uint32_t lo   = static_cast<uint32_t>(src);
+        const float    frac = src - static_cast<float>(lo);
+        const uint32_t hi   = std::min(lo + 1u, got_frames - 1u);
+        // Left channel
+        out[i * 2]     += (scratch_[lo * 2]     * (1.0f - frac)
+                         + scratch_[hi * 2]     * frac) * g;
+        // Right channel
+        out[i * 2 + 1] += (scratch_[lo * 2 + 1] * (1.0f - frac)
+                         + scratch_[hi * 2 + 1] * frac) * g;
+    }
+
+    // Position advances by the number of content frames we consumed.
+    position_.fetch_add(got_frames);
+    return out_frames;
 }
 
 // ---------------------------------------------------------------------------

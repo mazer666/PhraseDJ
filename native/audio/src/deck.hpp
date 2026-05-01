@@ -90,12 +90,13 @@ public:
     // Realtime-safe setters  (called from the audio callback)
     // ------------------------------------------------------------------
 
-    void set_gain(float v)          noexcept { state_.gain.store(v);         }
-    void set_pitch(float v)         noexcept { state_.pitch.store(v);        }
+    void set_gain(float v)             noexcept { state_.gain.store(v);         }
+    void set_pitch(float v)            noexcept { state_.pitch.store(v);        }
+    float get_pitch()            const noexcept { return state_.pitch.load();   }
     void set_stem_gain(int s, float v) noexcept {
         if (s >= 0 && s < 4) state_.stem_gain[s].store(v);
     }
-    void set_playing(bool v)        noexcept { state_.playing.store(v);      }
+    void set_playing(bool v)           noexcept { state_.playing.store(v);      }
 
     // ------------------------------------------------------------------
     // Audio callback API  (called from the RT thread only)

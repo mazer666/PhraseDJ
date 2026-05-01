@@ -11,6 +11,7 @@ import { Crossfader } from "./components/Crossfader";
 import { Deck } from "./components/Deck";
 import { StatusBar } from "./components/StatusBar";
 import { useEngineStore } from "./store/engineStore";
+import { useKeymap } from "./hooks/useKeymap";
 
 function App(): React.JSX.Element {
   const startPolling = useEngineStore((s) => s.startPolling);
@@ -21,6 +22,9 @@ function App(): React.JSX.Element {
     startPolling();
     return () => stopPolling();
   }, [startPolling, stopPolling]);
+
+  // Register global keyboard shortcuts driven by keymap.toml.
+  useKeymap();
 
   return (
     <div className="app-shell">

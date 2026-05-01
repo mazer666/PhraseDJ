@@ -194,6 +194,53 @@ impl Engine {
         if check_deck(deck).is_err() { return 0.0; }
         unsafe { ffi::pdj_engine_get_bpm(self.handle, deck) }
     }
+
+    // ----- Tempo ratio ---------------------------------------------------
+
+    /// Set the vinyl-style playback speed for a deck.
+    ///
+    /// `ratio` is clamped to [0.5, 2.0] in the C++ layer.
+    /// 1.0 = normal speed, 1.05 = +5 %, 0.95 = −5 %.
+    pub fn set_tempo_ratio(&self, deck: u32, ratio: f32) {
+        if check_deck(deck).is_err() { return; }
+        unsafe { ffi::pdj_engine_set_tempo_ratio(self.handle, deck, ratio) }
+    }
+
+    /// Return the current tempo ratio for a deck (1.0 if unset).
+    pub fn get_tempo_ratio(&self, deck: u32) -> f32 {
+        if check_deck(deck).is_err() { return 1.0; }
+        unsafe { ffi::pdj_engine_get_tempo_ratio(self.handle, deck) }
+    }
+
+    /// Nudge the playback speed by a small delta (positive = faster).
+    ///
+    /// The new ratio is clamped to [0.5, 2.0].
+    /// Typical delta: ±0.01 (1 %) per key-press.
+    pub fn nudge_tempo(&self, deck: u32, delta: f32) {
+        if check_deck(deck).is_err() { return; }
+        let current = self.get_tempo_ratio(deck);
+        let next = (current + delta).clamp(0.5, 2.0);
+        self.set_tempo_ratio(deck, next);
+    }
+
+    /// Synchronise `deck`'s tempo to the opposite deck's BPM.
+    ///
+    /// Reads both BPMs, computes the required ratio, and applies it.
+    /// Returns `Err` if either deck has no BPM data yet.
+    pub fn sync_tempo(&self, deck: u32) -> Result<()> {
+        check_deck(deck)?;
+        let other = 1 - deck;
+        let this_bpm  = self.get_bpm(deck);
+        let other_bpm = self.get_bpm(other);
+        if this_bpm <= 0.0 || other_bpm <= 0.0 {
+            warn!(deck, this_bpm, other_bpm, "sync_tempo: BPM not available");
+            return Err(BridgeError::Internal);
+        }
+        let ratio = other_bpm / this_bpm;
+        debug!(deck, ratio, "sync_tempo: applying ratio");
+        self.set_tempo_ratio(deck, ratio);
+        Ok(())
+    }
 }
 
 impl Drop for Engine {
