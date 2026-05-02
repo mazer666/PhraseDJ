@@ -149,7 +149,7 @@ impl StemBackend for OnnxBackend {
         let (out_shape, out_data) = out_value
             .try_extract_tensor::<f32>()
             .map_err(|e| Error::other(format!("Extraction failed: {}", e)))?;
-        
+
         let out_view = ndarray::ArrayViewD::from_shape(out_shape.dims(), out_data)
             .map_err(|e| Error::other(format!("ArrayView creation failed: {}", e)))?
             .to_dimensionality::<Ix4>()
