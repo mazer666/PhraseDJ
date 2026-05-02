@@ -4,12 +4,11 @@
 .PHONY: ci fmt lint test test-cpp file-length clean
 
 # Run the full quality bar (same gates as CI).
-ci: fmt lint test file-length
+ci: fmt lint test test-cpp file-length license
 
 # Format all code.
 fmt:
 	cargo fmt --all
-	cd apps/desktop && pnpm exec prettier --write "src/**/*.{ts,tsx,css}"
 
 # Lint all code.
 lint:
@@ -31,6 +30,10 @@ test-cpp:
 # File-length hard-limit check.
 file-length:
 	bash tools/check_file_size.sh
+
+# Dependency license audit (requires cargo-deny).
+license:
+	cargo deny check licenses
 
 clean:
 	cargo clean
