@@ -1,5 +1,12 @@
 name: CI
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -184,8 +191,8 @@ jobs:
   # -------------------------------------------------------------------------
   # Dependency licence audit
   # -------------------------------------------------------------------------
-  licence:
-    name: Licence audit
+  license:
+    name: License audit
     runs-on: ubuntu-24.04
 
     steps:
@@ -197,5 +204,5 @@ jobs:
       - name: Install cargo-deny
         uses: taiki-e/install-action@cargo-deny
 
-      - name: Check licences
+      - name: Check licenses
         run: cargo deny check licenses
