@@ -216,6 +216,23 @@ impl StemService {
     /// `subscribe()` instead.
     pub async fn wait(&self, track_id: TrackId) -> Result<StemPaths> {
         let mut rx = self.subscribe();
+
+        // 1. Check if already cached on disk.
+        let paths = stem_paths_for(&self.inner.cache_root, track_id);
+        if paths.all_exist() {
+            return Ok(paths);
+        }
+
+        // 2. Check if the track is actually in the queue.
+        // If it's not active and not on disk (checked above), it must have
+        // already failed (or was never enqueued).
+        {
+            let active = self.inner.active_tracks.lock().await;
+            if !active.contains(&track_id) {
+                return Err(Error::other("Analysis failed or was never started"));
+            }
+        }
+
         loop {
             match rx.recv().await {
                 Ok((tid, StemStatus::Cached { paths })) if tid == track_id => {
@@ -231,8 +248,7 @@ impl StemService {
                     return Err(Error::other("status channel closed"));
                 }
                 Err(async_broadcast::RecvError::Overflowed(_)) => {
-                    // We missed some events; check if the stems are on disk.
-                    let paths = stem_paths_for(&self.inner.cache_root, track_id);
+                    // We missed some events; check disk again.
                     if paths.all_exist() {
                         return Ok(paths);
                     }

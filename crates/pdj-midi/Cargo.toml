@@ -9,3 +9,5 @@ pdj-core  = { path = "../pdj-core" }
 serde     = { workspace = true }
 thiserror = { workspace = true }
 tracing   = { workspace = true }
+tokio     = { workspace = true }
+midir     = "0.10"
