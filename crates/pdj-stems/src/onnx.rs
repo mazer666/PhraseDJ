@@ -1,4 +1,4 @@
-use ndarray::{Array3, ArrayViewD, Ix4};
+use ndarray::{Array3, Ix4};
 use ort::session::builder::GraphOptimizationLevel;
 use ort::session::Session;
 use ort::value::Value;
@@ -191,18 +191,6 @@ impl StemBackend for OnnxBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn make_request(frames: usize, channels: u16) -> InferenceRequest {
-        InferenceRequest {
-            audio: PcmBuffer {
-                samples: vec![0.25_f32; frames * channels as usize],
-                channels,
-                sample_rate: 44_100,
-            },
-        }
-    }
-
-    // Test removed because stub inference was replaced by real execution.
 
     #[test]
     fn onnx_is_always_available() {

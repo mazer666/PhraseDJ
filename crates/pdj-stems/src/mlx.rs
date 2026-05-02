@@ -105,19 +105,6 @@ impl StemBackend for MlxBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::PcmBuffer;
-
-    fn make_request(frames: usize, channels: u16) -> InferenceRequest {
-        InferenceRequest {
-            audio: PcmBuffer {
-                samples: vec![0.5_f32; frames * channels as usize],
-                channels,
-                sample_rate: 44_100,
-            },
-        }
-    }
-
-    // Test removed because stub inference was replaced by real execution.
 
     #[test]
     fn backend_name_is_mlx() {

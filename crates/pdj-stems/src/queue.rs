@@ -707,12 +707,15 @@ mod tests {
                 assert!(paths.other.exists(), "other stem should be on disk");
             }
             Err(e) => {
-                // Expected when ONNX model is not installed.
+                // Expected in CI where the model is not pre-installed.
+                // The pipeline may attempt a download (which may also fail if
+                // the network is unavailable), so accept all model-related errors.
                 let msg = e.to_string();
                 assert!(
                     msg.contains("Model missing")
                         || msg.contains("model not found")
-                        || msg.contains("ONNX"),
+                        || msg.contains("ONNX")
+                        || msg.contains("Model download"),
                     "unexpected error: {msg}"
                 );
             }
