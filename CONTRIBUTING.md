@@ -20,17 +20,22 @@ change must follow. The most important ones:
 git clone https://github.com/mazer666/phodj.git PhraseDJ && cd PhraseDJ
 
 # 2. Install system deps (macOS with Homebrew)
-brew install rustup node cmake llvm
+brew install rustup node cmake llvm portaudio pkg-config glib
 rustup-init -y
 source "$HOME/.cargo/env"
 rustup component add rustfmt clippy
+
+# Linux (Debian/Ubuntu) native dependencies for full workspace checks
+sudo apt-get update
+sudo apt-get install -y build-essential pkg-config libglib2.0-dev portaudio19-dev cmake
 
 # 3. Install Node tooling
 npm install -g pnpm
 pnpm install --dir apps/desktop
 
 # 4. Run quality bar
-make ci    # format + lint + Rust tests + frontend tests + C++ tests
+make ci         # full quality bar (requires native system libs)
+make ci-minimal # reduced bar for constrained/dev environments
 ```
 
 ## Running the app

@@ -3,7 +3,7 @@
 > A modern, AI-assisted, uncompromisingly clean open-source DJ application.
 > macOS-first, fully local, no subscriptions, no cloud lock-in.
 
-**Status:** 🌱 Pre-Alpha — specification and planning phase
+**Status:** 🧪 Early Alpha — foundation and core prototypes are in active development
 **License:** MPL-2.0
 **Platform:** macOS 13+ (Apple Silicon optimized) · Linux/Windows from Phase 5
 
@@ -79,9 +79,9 @@ Once code lands:
 
 Details: [`specs/01-architecture.md`](specs/01-architecture.md).
 
-## Quickstart (once Phase 1 ships)
+## Quickstart (current development status)
 
-> Not yet runnable — comes with Phase 1, see `PROJECT_PLAN.md`.
+> Current state: frontend tests and multiple Rust/C++ modules exist, but full local setup still requires native system dependencies (see `CONTRIBUTING.md`).
 
 ```bash
 # Prerequisites

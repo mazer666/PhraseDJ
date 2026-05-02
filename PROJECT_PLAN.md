@@ -14,6 +14,10 @@
 - **Mode:** incremental, in phases each producing visible output
 - **Definition of Done per phase:** runnable, tested, documented, merged to main
 
+## Status note (May 2026)
+
+To avoid ambiguity, checked boxes are now reserved for work that is verified as complete and reproducible via docs/tests in this repository. Items previously marked too optimistically should be treated as in progress until explicitly re-verified.
+
 ## Success metrics
 
 | Metric | Target |
@@ -50,11 +54,11 @@ shows up as an empty Tauri window.
 **Goal:** play two tracks simultaneously, crossfader and volume work, keyboard
 control runs.
 
-- [x] CoreAudio integration via a PortAudio wrapper in C++
-- [x] FFI bridge `pdj-engine-bridge` (Rust ↔ C++)
-- [x] Decoders for MP3, FLAC, WAV, AAC (libsndfile + lightweight FFmpeg)
-- [x] Lock-free ring buffer for the audio callback
-- [x] Two deck instances (Play/Pause/Cue/Seek)
+- [ ] CoreAudio integration via a PortAudio wrapper in C++
+- [ ] FFI bridge `pdj-engine-bridge` (Rust ↔ C++)
+- [ ] Decoders for MP3, FLAC, WAV, AAC (libsndfile + lightweight FFmpeg)
+- [ ] Lock-free ring buffer for the audio callback
+- [ ] Two deck instances (Play/Pause/Cue/Seek)
 - [x] Crossfader, channel faders, master output
 - [x] Waveform renderer (canvas-based overview; `wgpu` upgrade planned Phase 2)
 - [x] Beatgrid detection (BPM via spectral auto-correlation)
