@@ -504,7 +504,6 @@ async fn process_job_inner(inner: Arc<ServiceInner>, job: StemJob) -> Result<()>
     Ok(())
 }
 
-
 /// The actual CPU-bound work: load PCM, segment, infer, stitch, write.
 ///
 /// This runs on a blocking OS thread (via `spawn_blocking`), so blocking
