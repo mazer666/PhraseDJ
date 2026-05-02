@@ -1,10 +1,13 @@
 # PhraseDJ — top-level convenience targets.
 # These mirror what the CI runs so you can check locally before pushing.
 
-.PHONY: ci fmt lint test test-cpp file-length clean
+.PHONY: ci fmt lint test test-cpp file-length license clean
+export PDJ_AUDIO_LIB_DIR=$(PWD)/native/audio/build
+export DYLD_LIBRARY_PATH=$(PWD)/native/audio/build
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 
 # Run the full quality bar (same gates as CI).
-ci: fmt lint test test-cpp file-length license
+ci: fmt test-cpp lint test file-length license
 
 # Format all code.
 fmt:

@@ -79,10 +79,10 @@ pub fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<
 
     if let Some(stems) = has_stems {
         let arr = [
-            &stems.vocals.as_path(),
-            &stems.drums.as_path(),
-            &stems.bass.as_path(),
-            &stems.other.as_path(),
+            stems.vocals.as_path(),
+            stems.drums.as_path(),
+            stems.bass.as_path(),
+            stems.other.as_path(),
         ];
         match engine.load_stems(deck, &p, &arr) {
             Ok(()) => return Ok(()),

@@ -85,8 +85,7 @@ impl Stitcher {
                 let acc_len = acc.len();
                 let fade = half_hann_fade(blend_frames);
 
-                for f in 0..blend_frames {
-                    let alpha = fade[f]; // 0 → 1 (new signal weight)
+                for (f, &alpha) in fade.iter().enumerate() {
                     for c in 0..self.channels as usize {
                         let i = f * self.channels as usize + c;
                         let acc_index = acc_len - blend_samples + i;

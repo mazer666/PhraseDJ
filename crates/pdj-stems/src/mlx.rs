@@ -28,11 +28,13 @@ use crate::backend::{InferenceRequest, InferenceResult, StemBackend};
 // ---------------------------------------------------------------------------
 
 /// Apple Silicon / MLX inference backend.
+#[allow(dead_code)]
 pub struct MlxBackend {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     model_loaded: Mutex<bool>,
 }
 
+#[allow(dead_code)]
 impl MlxBackend {
     /// Create a new MLX backend instance.
     ///

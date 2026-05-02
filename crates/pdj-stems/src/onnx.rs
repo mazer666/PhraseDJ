@@ -110,7 +110,7 @@ impl StemBackend for OnnxBackend {
             "Running ONNX inference",
         );
 
-        let session_guard = match self.get_or_load_session() {
+        let mut session_guard = match self.get_or_load_session() {
             Ok(g) => g,
             Err(e) => {
                 tracing::error!("ONNX model load failed: {}", e);
@@ -118,7 +118,7 @@ impl StemBackend for OnnxBackend {
             }
         };
 
-        let session = session_guard.as_ref().unwrap();
+        let session = session_guard.as_mut().unwrap();
 
         let frames = request.audio.frame_count();
         let channels = request.audio.channels as usize;
@@ -138,9 +138,11 @@ impl StemBackend for OnnxBackend {
         let input_value = Value::from_array(input_tensor)
             .map_err(|e| Error::other(format!("Failed to create input tensor: {}", e)))?;
 
+        // Use the first input name from the model (usually "input" or "audio").
+        let input_name = session.inputs()[0].name().to_string();
         let outputs = session
             .run(ort::inputs![
-                "input" => input_value,
+                input_name.as_str() => input_value,
             ])
             .map_err(|e| Error::other(format!("Inference failed: {}", e)))?;
 

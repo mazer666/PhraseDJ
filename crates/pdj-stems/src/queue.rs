@@ -93,6 +93,9 @@ struct ServiceInner {
     semaphore: Arc<Semaphore>,
     /// Absolute path to the stem cache root directory.
     cache_root: PathBuf,
+    /// Sentinel receiver to keep the broadcast channel alive even when no
+    /// external subscribers are listening.
+    _sentinel_rx: Receiver<(TrackId, StemStatus)>,
 }
 
 impl StemService {
@@ -116,7 +119,8 @@ impl StemService {
         let cache_root = stem_cache_root()?;
 
         let inner = Arc::new(ServiceInner {
-            status_tx,
+            status_tx: status_tx.clone(),
+            _sentinel_rx: _status_rx,
             active_tracks: Mutex::new(HashSet::new()),
             job_tx,
             semaphore: Arc::new(Semaphore::new(concurrency)),
@@ -263,6 +267,7 @@ impl StemService {
 
         let inner = Arc::new(ServiceInner {
             status_tx,
+            _sentinel_rx: _status_rx,
             active_tracks: Mutex::new(HashSet::new()),
             job_tx,
             semaphore: Arc::new(Semaphore::new(concurrency)),
@@ -504,10 +509,10 @@ where
 
     // --- 3. Segment into overlapping windows -----------------------------
     //
-    // Segment size: 8 s × sample_rate frames.
-    // Overlap:      1 s × sample_rate frames (half-Hann crossfade).
-    let segment_frames = 8 * sample_rate as usize;
-    let overlap_frames = sample_rate as usize;
+    // Segment size: match the ONNX model's expected window (approx 7.8 s).
+    // The smank model expects exactly 343980 frames.
+    let segment_frames = 343_980usize;
+    let overlap_frames = sample_rate as usize; // 1 s overlap
     let step_frames = segment_frames - overlap_frames;
 
     let mut stitcher = Stitcher::new(channels, sample_rate, overlap_frames);
@@ -515,21 +520,35 @@ where
     let mut segment_count = 0usize;
 
     // Estimate total segments for progress reporting.
-    let total_segments = (total_frames + step_frames - 1) / step_frames;
+    let total_segments = total_frames.div_ceil(step_frames);
 
     while offset < total_frames {
         let end = (offset + segment_frames).min(total_frames);
         let s_start = offset * channels as usize;
         let s_end = end * channels as usize;
+        let actual_frames = end - offset;
+        let mut samples = audio.samples[s_start..s_end].to_vec();
+        if samples.len() < segment_frames * channels as usize {
+            samples.resize(segment_frames * channels as usize, 0.0);
+        }
 
         let segment_buf = PcmBuffer {
-            samples: audio.samples[s_start..s_end].to_vec(),
+            samples,
             channels,
             sample_rate,
         };
 
         let result = backend.infer(InferenceRequest { audio: segment_buf })?;
-        stitcher.add_segment(result.stems);
+        let mut stems = result.stems;
+
+        // Trim padding from the results if the segment was padded.
+        if actual_frames < segment_frames {
+            for stem in stems.iter_mut() {
+                stem.samples.truncate(actual_frames * channels as usize);
+            }
+        }
+
+        stitcher.add_segment(stems);
 
         offset += step_frames;
         segment_count += 1;
@@ -678,8 +697,8 @@ mod tests {
             sample_format: hound::SampleFormat::Int,
         };
         let mut writer = hound::WavWriter::create(path, spec).expect("create WAV");
-        // 0.5 seconds of silence (44100 * 0.5 * 2 channels = 44100 samples)
-        for _ in 0..44_100 {
+        // 15.8 seconds of silence (700000 * 2 channels = 1400000 samples)
+        for _ in 0..1_400_000 {
             writer.write_sample(0i16).expect("write sample");
         }
         writer.finalize().expect("finalize WAV");

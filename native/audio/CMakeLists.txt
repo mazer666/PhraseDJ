@@ -6,12 +6,16 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# ---------------------------------------------------------------------------
 # Strict warnings — keep the codebase clean from the start.
-if(MSVC)
-  add_compile_options(/W4 /WX)
-else()
-  add_compile_options(-Wall -Wextra -Wpedantic -Werror)
-endif()
+# ---------------------------------------------------------------------------
+macro(apply_strict_warnings target)
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /W4 /WX)
+  else()
+    target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+endmacro()
 
 # ---------------------------------------------------------------------------
 # Find external libraries via pkg-config
@@ -43,6 +47,7 @@ target_include_directories(pdj_audio
     PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
+apply_strict_warnings(pdj_audio)
 
 target_link_libraries(pdj_audio
     PRIVATE PkgConfig::PORTAUDIO
@@ -64,11 +69,14 @@ option(PDJ_FETCH_GTEST "Download GoogleTest at configure time" ON)
 if(PDJ_FETCH_GTEST)
   FetchContent_Declare(
     googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  # Disable -Werror for GTest as it has character conversion issues with newer Clang.
+  set(CMAKE_COMPILE_WARNING_AS_ERROR OFF)
   FetchContent_MakeAvailable(googletest)
+  set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 
   enable_testing()
   include(GoogleTest)
@@ -87,6 +95,7 @@ if(PDJ_FETCH_GTEST)
       PRIVATE pdj_audio
       PRIVATE GTest::gtest_main
   )
+  apply_strict_warnings(pdj_audio_tests)
 
   gtest_discover_tests(pdj_audio_tests)
 endif()
