@@ -14,7 +14,7 @@ use tracing::info;
 
 /// Official/Reliable URL for the HTDemucs ONNX model.
 /// Note: In a real production app, this would point to an official CDN.
-const MODEL_URL: &str = "https://huggingface.co/sevagh/htdemucs-onnx/resolve/main/htdemucs.onnx";
+const MODEL_URL: &str = "https://huggingface.co/smank/htdemucs-onnx/resolve/main/htdemucs.onnx";
 
 /// Download the HTDemucs ONNX model to the given path with progress reporting.
 pub async fn download_model<F>(dest_path: &Path, mut on_progress: F) -> Result<()>
