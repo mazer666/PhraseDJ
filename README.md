@@ -91,6 +91,11 @@ rustup-init -y
 # Build
 git clone https://github.com/mazer666/phodj.git PhraseDJ
 cd PhraseDJ
+
+# 1. Build the native audio engine (Mandatory)
+make test-cpp
+
+# 2. Build and run the app
 pnpm install
 pnpm tauri dev
 ```

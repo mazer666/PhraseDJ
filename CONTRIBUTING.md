@@ -41,7 +41,8 @@ make ci-minimal # reduced bar for constrained/dev environments
 ## Running the app
 
 ```bash
-# Dev mode (hot reload, no audio yet in Phase 0)
+# Dev mode (hot reload, requires built audio engine)
+make test-cpp
 cd apps/desktop && pnpm tauri dev
 ```
 

@@ -25,7 +25,8 @@ use std::sync::Arc;
 
 use async_broadcast::{broadcast, Receiver, Sender};
 use pdj_core::{types::TrackId, Error, Result};
-use tokio::sync::{Mutex, Semaphore};
+use std::sync::Mutex;
+use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn};
 
 use crate::backend::{select_backend, InferenceRequest, PcmBuffer};
@@ -158,7 +159,7 @@ impl StemService {
 
         // Guard against duplicate jobs.
         {
-            let mut active = self.inner.active_tracks.lock().await;
+            let mut active = self.inner.active_tracks.lock().unwrap();
             if active.contains(&track_id) {
                 debug!(?track_id, "track already in queue — idempotent enqueue");
                 return Ok(());
@@ -190,7 +191,7 @@ impl StemService {
     /// If the track is already cached or was never queued, this is a no-op.
     /// Running jobs may complete before cancellation takes effect.
     pub async fn cancel(&self, track_id: TrackId) -> Result<()> {
-        let mut active = self.inner.active_tracks.lock().await;
+        let mut active = self.inner.active_tracks.lock().unwrap();
         if active.remove(&track_id) {
             debug!(?track_id, "stem job cancelled");
             // The worker checks active_tracks before processing — the job
@@ -227,7 +228,7 @@ impl StemService {
         // If it's not active and not on disk (checked above), it must have
         // already failed (or was never enqueued).
         {
-            let active = self.inner.active_tracks.lock().await;
+            let active = self.inner.active_tracks.lock().unwrap();
             if !active.contains(&track_id) {
                 return Err(Error::other("Analysis failed or was never started"));
             }
@@ -310,6 +311,15 @@ impl StemService {
             return Ok(());
         }
 
+        // Guard against duplicates and register for the worker.
+        {
+            let mut active = self.inner.active_tracks.lock().unwrap();
+            if active.contains(&job.track) {
+                return Ok(());
+            }
+            active.insert(job.track);
+        }
+
         self.inner
             .job_tx
             .send(StemJob {
@@ -377,14 +387,14 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
     }
 
     // Always remove from active set.
-    inner.active_tracks.lock().await.remove(&track_id);
+    inner.active_tracks.lock().unwrap().remove(&track_id);
 }
 
 async fn process_job_inner(inner: Arc<ServiceInner>, job: StemJob) -> Result<()> {
     let track_id = job.track_id;
     // Check whether the job was cancelled between enqueue and now.
     {
-        let active = inner.active_tracks.lock().await;
+        let active = inner.active_tracks.lock().unwrap();
         if !active.contains(&track_id) {
             debug!(?track_id, "job was cancelled before processing — skipping");
             return Ok(());

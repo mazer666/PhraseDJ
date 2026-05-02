@@ -55,6 +55,8 @@ interface EngineStore {
   setStemGain:   (deck: 0 | 1, stem: 0 | 1 | 2 | 3, value: number) => Promise<void>;
   /** Sync a deck's tempo to the opposite deck's BPM. */
   sync:    (deck: 0 | 1) => Promise<void>;
+  /** Seek a deck to an absolute frame position. */
+  seek:    (deck: 0 | 1, position: number) => Promise<void>;
   /** Nudge playback speed by a small delta (positive = faster). */
   nudgeTempo: (deck: 0 | 1, delta: number) => Promise<void>;
   /** Set playback speed ratio directly (1.0 = normal). */
@@ -215,6 +217,8 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   },
 
   sync: (deck) => deckApi.sync(deck),
+
+  seek: (deck, position) => deckApi.seek(deck, position),
 
   nudgeTempo: (deck, delta) => deckApi.nudgeTempo(deck, delta),
 

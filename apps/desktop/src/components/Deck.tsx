@@ -74,6 +74,7 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
         waveform={waveform}
         position={state.position}
         accentColor={side === "A" ? "#e05a2b" : "#2bb3e0"}
+        deck={deckIndex}
       />
 
       <div className="deck-transport">

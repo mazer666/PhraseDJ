@@ -54,7 +54,7 @@ pub fn run() {
                     // Start forwarding stem status events to the frontend.
                     let rx = state.stems.subscribe();
                     let handle = app.handle().clone();
-                    tokio::spawn(forward_stem_events(rx, handle));
+                    tauri::async_runtime::spawn(forward_stem_events(rx, handle));
 
                     app.manage(state);
                 }

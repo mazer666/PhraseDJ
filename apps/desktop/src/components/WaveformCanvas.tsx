@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useEngineStore } from "../store/engineStore";
 import type { WaveformData } from "../lib/api";
 
 export interface WaveformCanvasProps {
@@ -17,6 +18,8 @@ export interface WaveformCanvasProps {
   position:     number;
   /** Accent colour for the filled bars (CSS colour string). */
   accentColor:  string;
+  /** Deck index (0 or 1). */
+  deck:         0 | 1;
   /** Canvas height in CSS pixels. */
   height?:      number;
 }
@@ -25,9 +28,23 @@ export function WaveformCanvas({
   waveform,
   position,
   accentColor,
+  deck,
   height = 48,
 }: WaveformCanvasProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const seek = useEngineStore((s) => s.seek);
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !waveform || waveform.total_frames === 0) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const progress = x / rect.width;
+    const targetFrame = Math.floor(progress * waveform.total_frames);
+    
+    seek(deck, targetFrame);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -138,7 +155,8 @@ export function WaveformCanvas({
     <canvas
       ref={canvasRef}
       className="waveform-canvas"
-      style={{ width: "100%", height: `${height}px`, display: "block" }}
+      style={{ width: "100%", height: `${height}px`, display: "block", cursor: "pointer" }}
+      onClick={handleCanvasClick}
     />
   );
 }

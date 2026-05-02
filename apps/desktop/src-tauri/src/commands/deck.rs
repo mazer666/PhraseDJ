@@ -40,7 +40,7 @@ pub struct DeckState {
 
 /// Load a file onto a deck (`deck` = 0 or 1).
 #[tauri::command]
-pub fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<(), String> {
     let p = PathBuf::from(&path);
 
     // Auto-import to get TrackId (or find existing)
@@ -53,10 +53,7 @@ pub fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<
 
     // Enqueue for background stem separation. If it's already cached or running,
     // the queue handles idempotency internally.
-    if let Err(e) = state.stems.submit(pdj_stems::QueueJob {
-        track: track_id,
-        path: p.clone(),
-    }) {
+    if let Err(e) = state.stems.enqueue(track_id, p.clone()).await {
         tracing::warn!("Failed to queue stem separation: {}", e);
     }
 

@@ -49,8 +49,14 @@ impl AppState {
 
         // Start the stem separation service (runs on the Tokio reactor).
         let settings = pdj_core::StemsSettings::default();
-        let cache_root = pdj_stems::paths::stem_cache_root()?;
-        let stems = pdj_stems::StemService::start(settings, cache_root);
+        let stems = tauri::async_runtime::block_on(async {
+            pdj_stems::StemService::new(if settings.max_parallel_jobs == 0 {
+                None
+            } else {
+                Some(settings.max_parallel_jobs as usize)
+            })
+            .await
+        })?;
 
         Ok(Self {
             engine: Mutex::new(engine),
