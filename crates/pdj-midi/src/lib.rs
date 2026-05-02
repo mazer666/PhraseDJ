@@ -16,8 +16,13 @@ pub struct MidiDeviceInfo {
 
 /// List all currently connected MIDI input devices.
 pub fn list_devices() -> Result<Vec<MidiDeviceInfo>> {
-    let midi_in = MidiInput::new("PhraseDJ-Input")
-        .map_err(|e| Error::other(format!("Failed to open MIDI input: {}", e)))?;
+    let midi_in = match MidiInput::new("PhraseDJ-Input") {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::warn!("MIDI input subsystem unavailable: {}", e);
+            return Ok(Vec::new());
+        }
+    };
 
     let ports = midi_in.ports();
     let mut devices = Vec::new();

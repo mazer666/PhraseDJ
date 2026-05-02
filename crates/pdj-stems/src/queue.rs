@@ -372,12 +372,22 @@ async fn run_worker(
 async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
     let track_id = job.track_id;
 
+    if let Err(e) = process_job_inner(Arc::clone(&inner), job).await {
+        error!(?track_id, error = %e, "job processing failed");
+    }
+
+    // Always remove from active set.
+    inner.active_tracks.lock().await.remove(&track_id);
+}
+
+async fn process_job_inner(inner: Arc<ServiceInner>, job: StemJob) -> Result<()> {
+    let track_id = job.track_id;
     // Check whether the job was cancelled between enqueue and now.
     {
         let active = inner.active_tracks.lock().await;
         if !active.contains(&track_id) {
             debug!(?track_id, "job was cancelled before processing — skipping");
-            return;
+            return Ok(());
         }
     }
 
@@ -396,7 +406,7 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
                 },
             )
             .await;
-            return;
+            return Err(e);
         }
     };
 
@@ -433,7 +443,7 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
                 },
             )
             .await;
-            return;
+            return Err(e);
         }
     }
 
@@ -461,9 +471,6 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
         })
     })
     .await;
-
-    // Remove from active set regardless of outcome.
-    inner.active_tracks.lock().await.remove(&track_id);
 
     match result {
         Ok(Ok(paths)) => {
@@ -493,7 +500,10 @@ async fn process_job(inner: Arc<ServiceInner>, job: StemJob) {
             .await;
         }
     }
+
+    Ok(())
 }
+
 
 /// The actual CPU-bound work: load PCM, segment, infer, stitch, write.
 ///
