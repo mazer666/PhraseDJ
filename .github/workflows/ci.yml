@@ -22,6 +22,12 @@ jobs:
       matrix:
         os: [macos-14, ubuntu-22.04]
 
+    env:
+      PDJ_AUDIO_LIB_DIR: ${{ github.workspace }}/native/audio/build
+      DYLD_LIBRARY_PATH: ${{ github.workspace }}/native/audio/build
+      LD_LIBRARY_PATH: ${{ github.workspace }}/native/audio/build
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +52,13 @@ jobs:
             libsoup-3.0-dev \
             portaudio19-dev \
             libsndfile1-dev
+
+      - name: Build C++ engine
+        working-directory: native/audio
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=clang++
+          cmake --build build --parallel
 
       - name: Check formatting
         run: cargo fmt --all -- --check
