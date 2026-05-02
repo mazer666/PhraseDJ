@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-22.04]
+        os: [macos-14, ubuntu-24.04]
 
     env:
       PDJ_AUDIO_LIB_DIR: ${{ github.workspace }}/native/audio/build
@@ -95,7 +95,7 @@ jobs:
   # -------------------------------------------------------------------------
   frontend:
     name: Frontend (Node ${{ matrix.node }})
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         node: ["20"]
@@ -133,7 +133,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-22.04]
+        os: [macos-14, ubuntu-24.04]
 
     steps:
       - uses: actions/checkout@v4
@@ -173,7 +173,7 @@ jobs:
   # -------------------------------------------------------------------------
   file-length:
     name: File length check
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
@@ -186,7 +186,7 @@ jobs:
   # -------------------------------------------------------------------------
   licence:
     name: Licence audit
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
