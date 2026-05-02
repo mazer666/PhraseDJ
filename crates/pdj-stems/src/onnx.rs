@@ -135,7 +135,7 @@ impl StemBackend for OnnxBackend {
             .map_err(|e| Error::other(format!("Shape error: {}", e)))?;
 
         // ort 2.0 requires explicit Value creation from ndarray.
-        let input_value = Value::from_array(&input_tensor)
+        let input_value = Value::from_array(input_tensor)
             .map_err(|e| Error::other(format!("Failed to create input tensor: {}", e)))?;
 
         let outputs = session
@@ -150,16 +150,18 @@ impl StemBackend for OnnxBackend {
             .try_extract_tensor::<f32>()
             .map_err(|e| Error::other(format!("Extraction failed: {}", e)))?;
 
-        let out_view = ndarray::ArrayViewD::from_shape(out_shape.dims(), out_data)
+        let shape: Vec<usize> = out_shape.iter().map(|&d| d as usize).collect();
+        let out_view = ndarray::ArrayViewD::from_shape(shape, out_data)
             .map_err(|e| Error::other(format!("ArrayView creation failed: {}", e)))?
-            .to_dimensionality::<Ix4>()
+            .into_dimensionality::<Ix4>()
             .map_err(|e| Error::other(format!("Output dimension mismatch: {}", e)))?;
 
-        // We know the shape should be [1, 4, channels, frames]
-        // But let's safely iterate and re-interleave
-        // out_tensor acts as an ArrayViewD
+        // HTDemucs native output order: 0=drums, 1=bass, 2=other, 3=vocals
+        // StemLabel::ALL target order: 0=vocals, 1=drums, 2=bass, 3=other
+        let demucs_to_stemlabel = [3, 0, 1, 2];
+
         let mut stems = Vec::new();
-        for stem_idx in 0..4 {
+        for &stem_idx in &demucs_to_stemlabel {
             let mut interleaved = vec![0.0f32; frames * channels];
             for c in 0..channels {
                 for f in 0..frames {

@@ -80,19 +80,22 @@ impl Stitcher {
             } else {
                 // Blend: the last `overlap_samples` in `acc` are cross-faded
                 // with the first `overlap_samples` of the new segment.
-                let blend_len = self.overlap_samples.min(acc.len()).min(new_samples.len());
+                let blend_samples = self.overlap_samples.min(acc.len()).min(new_samples.len());
+                let blend_frames = blend_samples / self.channels as usize;
                 let acc_len = acc.len();
-                let fade = half_hann_fade(blend_len);
+                let fade = half_hann_fade(blend_frames);
 
-                for i in 0..blend_len {
-                    // fade_out for acc, fade_in for new.
-                    let alpha = fade[i]; // 0 → 1 (new signal weight)
-                    let acc_index = acc_len - blend_len + i;
-                    acc[acc_index] = acc[acc_index] * (1.0 - alpha) + new_samples[i] * alpha;
+                for f in 0..blend_frames {
+                    let alpha = fade[f]; // 0 → 1 (new signal weight)
+                    for c in 0..self.channels as usize {
+                        let i = f * self.channels as usize + c;
+                        let acc_index = acc_len - blend_samples + i;
+                        acc[acc_index] = acc[acc_index] * (1.0 - alpha) + new_samples[i] * alpha;
+                    }
                 }
 
                 // Append the non-overlapping tail of the new segment.
-                acc.extend_from_slice(&new_samples[blend_len..]);
+                acc.extend_from_slice(&new_samples[blend_samples..]);
             }
         }
     }
