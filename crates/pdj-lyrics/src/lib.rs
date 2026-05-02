@@ -7,9 +7,9 @@
 //! 4. Online lookup (LRCLib)
 //! 5. Local Whisper alignment (on vocals stem)
 
-use std::path::Path;
 use pdj_core::{Result, TrackId};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LyricsSource {
@@ -45,7 +45,10 @@ pub struct ResolveOptions {
 /// Resolve lyrics for a given track using the priority chain.
 pub async fn resolve(track: TrackId, _options: ResolveOptions) -> Result<Lyrics> {
     // Phase 2 implementation will check tags and sidecars first.
-    Err(pdj_core::Error::other(format!("Lyrics not found for track {}", track)))
+    Err(pdj_core::Error::other(format!(
+        "Lyrics not found for track {}",
+        track
+    )))
 }
 
 /// Export lyrics to an LRC file.
