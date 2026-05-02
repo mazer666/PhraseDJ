@@ -178,7 +178,7 @@ Durchgeführte Checks (lokal):
 
 ### Welle 4 — „Differenzierung ausbauen“
 - Erst dann AI-Mehrwert (Phrase/Macros/Lyrics) produktreif machen.
-- Plugin/Scripting/MCP als Erweiterung, nicht als Blocker.
+- Plugin/Scripting/MCP as Erweiterung, nicht als Blocker.
 
 ---
 
@@ -197,3 +197,12 @@ Durchgeführte Checks (lokal):
 Das Projekt ist **viel weiter als „nur Spezifikation“**, aber aktuell in einer riskanten Zwischenlage: technisch ambitioniert, kommunikativ inkonsistent und operativ noch nicht robust genug für verlässliche externe Mitarbeit.
 
 Die nächsten 4–8 Wochen sollten **nicht** primär neue Features liefern, sondern **Klarheit + Reproduzierbarkeit + Stabilität**. Das erhöht die Wahrscheinlichkeit, dass PhraseDJ als ernstzunehmendes Open-Source-DJ-Produkt nachhaltig wächst.
+
+
+## Addendum (2. Mai 2026, nach Remote-Änderungen)
+
+Seit dem ursprünglichen Audit wurden CI-Workflows angepasst und installieren auf Ubuntu/macOS nun explizit die nativen Abhängigkeiten (u. a. PortAudio, libsndfile sowie Linux-GUI/libs für Tauri). Dadurch ist ein wesentlicher Teil des ursprünglichen Reproduzierbarkeitsrisikos bereits reduziert.
+
+Konsequenz für die Priorisierung:
+- Der Punkt „Build-Abhängigkeiten dokumentieren“ bleibt wichtig, ist aber nicht mehr „kritisch ungeklärt“.
+- Fokus sollte jetzt stärker auf Statuskonsistenz, belastbaren Done-Kriterien und Stabilität des Audio-Kerns liegen.

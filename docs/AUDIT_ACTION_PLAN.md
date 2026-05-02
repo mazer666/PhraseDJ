@@ -12,5 +12,9 @@ This file tracks execution of the May 2, 2026 audit recommendations.
 
 ## Deferred by decision
 
-6. Crate maturity matrix (stub/prototype/active/stable) is intentionally **documented only** for a later maintainer decision.
+1. Crate maturity matrix (stub/prototype/active/stable) is intentionally **documented only** for a later maintainer decision.
    - Rationale: requires owner-level product/roadmap governance choices and could create churn while current stabilization work is ongoing.
+
+## Remote changes considered
+
+- CI workflow now provisions key native dependencies on Linux and macOS; this addresses part of the prior reproducibility concern and has been incorporated into the follow-up prioritization.
