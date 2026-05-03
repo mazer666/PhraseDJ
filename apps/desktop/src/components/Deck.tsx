@@ -10,7 +10,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEngineStore } from "../store/engineStore";
 import { WaveformCanvas } from "./WaveformCanvas";
 import { Turntable } from "./Turntable";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface DeckProps {
   side: "A" | "B";
@@ -33,6 +33,7 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
   const sync       = useEngineStore((s) => s.sync);
   const nudgeTempo = useEngineStore((s) => s.nudgeTempo);
   const seek = useEngineStore((s) => s.seek);
+  const cue = useEngineStore((s) => s.cue);
   const stemStatus = useEngineStore((s) => s.stemStatusForDeck(deckIndex));
   const autoTransition = useEngineStore((s) => s.autoTransition);
   const [autoBeats, setAutoBeats] = useState(16);
@@ -44,6 +45,8 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
   const [eqLow, setEqLow] = useState(1);
   const [eqMid, setEqMid] = useState(1);
   const [eqHigh, setEqHigh] = useState(1);
+  const flushTimer = useRef<number | null>(null);
+  const lastSent = useRef<[number, number, number, number]>([-1, -1, -1, -1]);
 
   const onChooseFile = async () => {
     const selected = await open({
@@ -80,12 +83,20 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
     void setStemGain(deckIndex, stem, Math.max(0, Math.min(1.5, raw)));
 
   useEffect(() => {
-    for (const stem of [0, 1, 2, 3] as const) {
-      const soloGate = anySolo ? (stemSolo[stem] ? 1 : 0) : 1;
-      const muteGate = stemMute[stem] ? 0 : 1;
-      const processed = stemGains[stem] * soloGate * muteGate * eqMultiplierForStem(stem);
-      void setStemOutputGain(deckIndex, stem, Math.max(0, Math.min(1.5, processed)));
-    }
+    if (flushTimer.current !== null) window.clearTimeout(flushTimer.current);
+    flushTimer.current = window.setTimeout(() => {
+      for (const stem of [0, 1, 2, 3] as const) {
+        const soloGate = anySolo ? (stemSolo[stem] ? 1 : 0) : 1;
+        const muteGate = stemMute[stem] ? 0 : 1;
+        const processed = Math.max(0, Math.min(1.5, stemGains[stem] * soloGate * muteGate * eqMultiplierForStem(stem)));
+        if (Math.abs(lastSent.current[stem] - processed) < 0.001) continue;
+        lastSent.current[stem] = processed;
+        void setStemOutputGain(deckIndex, stem, processed);
+      }
+    }, 33);
+    return () => {
+      if (flushTimer.current !== null) window.clearTimeout(flushTimer.current);
+    };
   }, [anySolo, stemSolo, stemMute, stemGains, eqLow, eqMid, eqHigh, deckIndex, setStemOutputGain]);
 
   const handOverToOtherDeck = () => {
@@ -117,7 +128,7 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
         position={state.position}
         totalFrames={waveform?.total_frames ?? 0}
         bpm={state.bpm}
-        trackLabel={loadedPath ? loadedPath.split(/[\/]/).pop() : undefined}
+        trackLabel={loadedPath ? loadedPath.split(/[\\/]/).pop() : undefined}
         onSeek={(f) => { void seek(deckIndex, f); }}
       />
 
@@ -140,7 +151,7 @@ export function Deck({ side }: DeckProps): React.JSX.Element {
       />
 
       <div className="deck-transport">
-        <button className="btn-secondary" onClick={() => { void pause(deckIndex); void seek(deckIndex, 0); }} disabled={!state.loaded}>Cue</button>
+        <button className="btn-secondary" onClick={() => void cue(deckIndex)} disabled={!state.loaded}>Cue</button>
         <button className="btn-secondary" onClick={handOverToOtherDeck} disabled={!state.loaded}>Hand Over</button>
         <button className="btn-secondary" onClick={() => autoTransition(autoBeats, deckIndex)} disabled={!state.loaded}>AutoSwitch</button>
         <input className="beats-input" type="number" min={2} max={64} step={2} value={autoBeats} onChange={(e) => setAutoBeats(parseInt(e.target.value || "16", 10))} title="AutoSwitch beats" />

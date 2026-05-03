@@ -35,7 +35,7 @@ export function Turntable({ playing, position, totalFrames, bpm, trackLabel, onS
     let delta = nextAngle - prev;
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;
-    const frameDelta = Math.round((delta / 360) * Math.max(44100, totalFrames / 40));
+    const frameDelta = Math.round((delta / 360) * (44100 * 1.8));
     onSeek(Math.max(0, Math.min(totalFrames, position + frameDelta)));
     lastAngle.current = nextAngle;
   };
