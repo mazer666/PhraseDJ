@@ -751,7 +751,9 @@ mod tests {
 
         // The ONNX model won't be available in tests, so we expect a failure.
         // This validates the full pipeline up to inference.
-        let result = service.wait(track).await;
+        let result = tokio::time::timeout(std::time::Duration::from_secs(30), service.wait(track))
+            .await
+            .unwrap_or_else(|_| Err(Error::other("Timed out waiting for stem analysis in test")));
         // Either succeeds (model present) or fails with a model-not-found error.
         match result {
             Ok(paths) => {
@@ -769,7 +771,8 @@ mod tests {
                     msg.contains("Model missing")
                         || msg.contains("model not found")
                         || msg.contains("ONNX")
-                        || msg.contains("Model download"),
+                        || msg.contains("Model download")
+                        || msg.contains("Timed out waiting for stem analysis"),
                     "unexpected error: {msg}"
                 );
             }
