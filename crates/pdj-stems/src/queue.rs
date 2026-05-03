@@ -785,14 +785,18 @@ mod tests {
         let service = StemService::new(Some(1)).await.expect("StemService::new");
         let track = TrackId::new();
         let cached = stem_paths_for(&service.inner.cache_root, track);
-        std::fs::create_dir_all(cached.vocals.parent().expect("stems dir")).expect("create stems dir");
+        std::fs::create_dir_all(cached.vocals.parent().expect("stems dir"))
+            .expect("create stems dir");
         std::fs::write(&cached.vocals, []).expect("vocals");
         std::fs::write(&cached.drums, []).expect("drums");
         std::fs::write(&cached.bass, []).expect("bass");
         std::fs::write(&cached.other, []).expect("other");
 
         // Cached tracks should skip queueing entirely and remain idempotent.
-        service.enqueue(track, wav_path.clone()).await.expect("enqueue 1");
+        service
+            .enqueue(track, wav_path.clone())
+            .await
+            .expect("enqueue 1");
         service.enqueue(track, wav_path).await.expect("enqueue 2");
         assert!(cached.all_exist(), "cached files should remain available");
     }
