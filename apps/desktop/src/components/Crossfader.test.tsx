@@ -15,7 +15,9 @@ function resetStore() {
 }
 
 describe("Crossfader", () => {
-  beforeEach(() => { resetStore(); });
+  beforeEach(() => {
+    resetStore();
+  });
 
   it("renders A and B labels", () => {
     render(<Crossfader />);

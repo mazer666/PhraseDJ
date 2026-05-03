@@ -10,27 +10,34 @@ import { useEffect, useState } from "react";
 import { app, type UiSettings } from "../lib/api";
 
 const DEFAULTS: UiSettings = {
-  sample_rate:     44_100,
-  buffer_size:     128,
+  sample_rate: 44_100,
+  buffer_size: 128,
   pitch_range_pct: 8.0,
-  music_root:      "~/Music",
-  online_lookup:   false,
-  target_fps:      60,
-  update_check:    false,
+  music_root: "~/Music",
+  online_lookup: false,
+  target_fps: 60,
+  update_check: false,
 };
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
-export function SettingsModal({ onClose }: SettingsModalProps): React.JSX.Element {
+export function SettingsModal({
+  onClose,
+}: SettingsModalProps): React.JSX.Element {
   const [settings, setSettings] = useState<UiSettings>(DEFAULTS);
-  const [dirty,    setDirty]    = useState(false);
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    app.settingsLoad().then((s) => setSettings(s)).catch(() => {/* use defaults */});
+    app
+      .settingsLoad()
+      .then((s) => setSettings(s))
+      .catch(() => {
+        /* use defaults */
+      });
   }, []);
 
   function update<K extends keyof UiSettings>(key: K, value: UiSettings[K]) {
@@ -64,7 +71,9 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.JSX.Elemen
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Settings</h2>
-          <button className="btn-icon" onClick={onClose} title="Close">✕</button>
+          <button className="btn-icon" onClick={onClose} title="Close">
+            ✕
+          </button>
         </div>
 
         <div className="modal-body">
@@ -106,9 +115,13 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.JSX.Elemen
                   max={16}
                   step={1}
                   value={settings.pitch_range_pct}
-                  onChange={(e) => update("pitch_range_pct", Number(e.target.value))}
+                  onChange={(e) =>
+                    update("pitch_range_pct", Number(e.target.value))
+                  }
                 />
-                <span className="value-label">±{settings.pitch_range_pct} %</span>
+                <span className="value-label">
+                  ±{settings.pitch_range_pct} %
+                </span>
               </div>
             </label>
           </section>
@@ -137,8 +150,8 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.JSX.Elemen
               <div>
                 <span>Online lyrics lookup</span>
                 <p className="settings-hint">
-                  Fetches lyrics from LRCLib. Only title, artist and
-                  duration are sent — never the audio file.
+                  Fetches lyrics from LRCLib. Only title, artist and duration
+                  are sent — never the audio file.
                 </p>
               </div>
               <input
@@ -191,7 +204,9 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.JSX.Elemen
             Reset to defaults
           </button>
           <div style={{ flex: 1 }} />
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
           <button
             className="btn-primary"
             disabled={!dirty || saving}

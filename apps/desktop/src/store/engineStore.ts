@@ -8,7 +8,12 @@
 
 import { create } from "zustand";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { deckApi, mixerApi, type DeckState, type WaveformData } from "../lib/api";
+import {
+  deckApi,
+  mixerApi,
+  type DeckState,
+  type WaveformData,
+} from "../lib/api";
 
 const POLL_INTERVAL_MS = 50; // 20 fps – plenty for transport indicators
 
@@ -32,8 +37,13 @@ interface EngineStore {
   loadedTrackIds: [string | null, string | null];
 
   // Active stem analysis jobs: track_id -> { status, progress, reason }
-  stemJobs: Record<string, { status: string; progress: number; reason?: string }>;
-  stemStatusForDeck: (deck: 0 | 1) => { status: string; progress: number; reason?: string } | null;
+  stemJobs: Record<
+    string,
+    { status: string; progress: number; reason?: string }
+  >;
+  stemStatusForDeck: (
+    deck: 0 | 1,
+  ) => { status: string; progress: number; reason?: string } | null;
 
   // Mixer state (kept locally; pushed to engine on change).
   faderA: number;
@@ -50,20 +60,28 @@ interface EngineStore {
   stopPolling: () => void;
 
   // Actions.
-  load:    (deck: 0 | 1, path: string) => Promise<void>;
-  play:    (deck: 0 | 1) => Promise<void>;
-  pause:   (deck: 0 | 1) => Promise<void>;
-  setFader:      (deck: 0 | 1, value: number) => Promise<void>;
+  load: (deck: 0 | 1, path: string) => Promise<void>;
+  play: (deck: 0 | 1) => Promise<void>;
+  pause: (deck: 0 | 1) => Promise<void>;
+  setFader: (deck: 0 | 1, value: number) => Promise<void>;
   setCrossfader: (value: number) => Promise<void>;
   setMasterGain: (value: number) => Promise<void>;
-  setStemGain:   (deck: 0 | 1, stem: 0 | 1 | 2 | 3, value: number) => Promise<void>;
-  setStemOutputGain: (deck: 0 | 1, stem: 0 | 1 | 2 | 3, value: number) => Promise<void>;
+  setStemGain: (
+    deck: 0 | 1,
+    stem: 0 | 1 | 2 | 3,
+    value: number,
+  ) => Promise<void>;
+  setStemOutputGain: (
+    deck: 0 | 1,
+    stem: 0 | 1 | 2 | 3,
+    value: number,
+  ) => Promise<void>;
   toggleStemMute: (deck: 0 | 1, stem: 0 | 1 | 2 | 3) => Promise<void>;
   cue: (deck: 0 | 1) => Promise<void>;
   /** Sync a deck's tempo to the opposite deck's BPM. */
-  sync:    (deck: 0 | 1) => Promise<void>;
+  sync: (deck: 0 | 1) => Promise<void>;
   /** Seek a deck to an absolute frame position. */
-  seek:    (deck: 0 | 1, position: number) => Promise<void>;
+  seek: (deck: 0 | 1, position: number) => Promise<void>;
   /** Nudge playback speed by a small delta (positive = faster). */
   nudgeTempo: (deck: 0 | 1, delta: number) => Promise<void>;
   /** Set playback speed ratio directly (1.0 = normal). */
@@ -83,8 +101,8 @@ const blankState = (deck: number): DeckState => ({
 let pollHandle: number | null = null;
 let stemUnlisten: UnlistenFn | null = null;
 
-const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
-
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 export const useEngineStore = create<EngineStore>((set, get) => ({
   decks: [blankState(0), blankState(1)],
@@ -111,10 +129,7 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
     if (pollHandle !== null) return;
     const tick = async () => {
       try {
-        const [a, b] = await Promise.all([
-          deckApi.state(0),
-          deckApi.state(1),
-        ]);
+        const [a, b] = await Promise.all([deckApi.state(0), deckApi.state(1)]);
         set({ decks: [a, b] });
       } catch (e) {
         // Engine unavailable – leave state as-is.
@@ -126,12 +141,16 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
     if (stemUnlisten === null) {
       listen<StemStatusEvent>("stem-status", (event) => {
         const { track_id, status, progress, reason } = event.payload;
-        
+
         set((s) => {
           const nextJobs = { ...s.stemJobs };
           if (status === "cached" || status === "failed") {
             // Remove terminal jobs after a delay.
-            nextJobs[track_id] = { status, progress: 1.0, reason: reason ?? undefined };
+            nextJobs[track_id] = {
+              status,
+              progress: 1.0,
+              reason: reason ?? undefined,
+            };
           } else {
             // "pending", "running", or "model_downloading"
             nextJobs[track_id] = { status, progress: progress ?? 0.0 };
@@ -148,16 +167,25 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
             if (p) {
               // Re-load triggers the Rust side to detect cached stems
               // and use load_stems instead of load.
-              deckApi.load(deck, p).then(() => {
-                // Refresh waveform to show stem colours.
-                deckApi.waveform(deck).then((data) => {
-                  set((s) => {
-                    const next = [...s.waveforms] as [WaveformData | null, WaveformData | null];
-                    next[deck] = data;
-                    return { waveforms: next };
-                  });
-                }).catch(() => {});
-              }).catch(() => {});
+              deckApi
+                .load(deck, p)
+                .then(() => {
+                  // Refresh waveform to show stem colours.
+                  deckApi
+                    .waveform(deck)
+                    .then((data) => {
+                      set((s) => {
+                        const next = [...s.waveforms] as [
+                          WaveformData | null,
+                          WaveformData | null,
+                        ];
+                        next[deck] = data;
+                        return { waveforms: next };
+                      });
+                    })
+                    .catch(() => {});
+                })
+                .catch(() => {});
             }
           }
 
@@ -170,10 +198,11 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
             });
           }, 5000);
         }
-      }).then((fn) => { stemUnlisten = fn; });
+      }).then((fn) => {
+        stemUnlisten = fn;
+      });
     }
   },
-
 
   stopPolling: () => {
     if (pollHandle !== null) {
@@ -197,15 +226,22 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
       return { loadedPaths: next, loadedTrackIds: ids };
     });
     // Compute waveform peaks in the background after load.
-    deckApi.waveform(deck).then((data) => {
-      set((s) => {
-        const next: [WaveformData | null, WaveformData | null] = [...s.waveforms] as [WaveformData | null, WaveformData | null];
-        next[deck] = data;
-        return { waveforms: next };
+    deckApi
+      .waveform(deck)
+      .then((data) => {
+        set((s) => {
+          const next: [WaveformData | null, WaveformData | null] = [
+            ...s.waveforms,
+          ] as [WaveformData | null, WaveformData | null];
+          next[deck] = data;
+          return { waveforms: next };
+        });
+      })
+      .catch(() => {
+        /* waveform unavailable — no-op */
       });
-    }).catch(() => { /* waveform unavailable — no-op */ });
   },
-  play:  (deck) => deckApi.play(deck),
+  play: (deck) => deckApi.play(deck),
   pause: (deck) => deckApi.pause(deck),
 
   setFader: async (deck, value) => {
@@ -236,7 +272,8 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
       }
     });
   },
-  setStemOutputGain: (deck, stem, value) => mixerApi.setStemGain(deck, stem, value),
+  setStemOutputGain: (deck, stem, value) =>
+    mixerApi.setStemGain(deck, stem, value),
 
   toggleStemMute: async (deck, stem) => {
     const muted = deck === 0 ? get().stemMuteA[stem] : get().stemMuteB[stem];
@@ -280,9 +317,13 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const xf = source === 0 ? t : 1 - t;
-      await get().setCrossfader(xf).catch(() => {});
+      await get()
+        .setCrossfader(xf)
+        .catch(() => {});
       await sleep(interval);
     }
-    await get().pause(source as 0 | 1).catch(() => {});
+    await get()
+      .pause(source as 0 | 1)
+      .catch(() => {});
   },
 }));

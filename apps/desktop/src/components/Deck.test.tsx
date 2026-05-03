@@ -40,9 +40,9 @@ describe("Deck (side A)", () => {
       decks: [blankDeck(0), blankDeck(1)],
       faderA: 1.0,
       faderB: 1.0,
-      load:     vi.fn().mockResolvedValue(undefined),
-      play:     vi.fn().mockResolvedValue(undefined),
-      pause:    vi.fn().mockResolvedValue(undefined),
+      load: vi.fn().mockResolvedValue(undefined),
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn().mockResolvedValue(undefined),
       setFader: vi.fn().mockResolvedValue(undefined),
     } as any);
   });
@@ -76,14 +76,18 @@ describe("Deck (side A)", () => {
 
   it("Play button is disabled when not loaded", () => {
     render(<Deck side="A" />);
-    const btn = screen.getByRole("button", { name: "Play" }) as HTMLButtonElement;
+    const btn = screen.getByRole("button", {
+      name: "Play",
+    }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
 
   it("Play button is enabled when loaded", () => {
     setDeckState("A", { loaded: true });
     render(<Deck side="A" />);
-    const btn = screen.getByRole("button", { name: "Play" }) as HTMLButtonElement;
+    const btn = screen.getByRole("button", {
+      name: "Play",
+    }) as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
   });
 
@@ -137,9 +141,9 @@ describe("Deck (side B)", () => {
       decks: [blankDeck(0), blankDeck(1)],
       faderA: 1.0,
       faderB: 1.0,
-      load:     vi.fn().mockResolvedValue(undefined),
-      play:     vi.fn().mockResolvedValue(undefined),
-      pause:    vi.fn().mockResolvedValue(undefined),
+      load: vi.fn().mockResolvedValue(undefined),
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn().mockResolvedValue(undefined),
       setFader: vi.fn().mockResolvedValue(undefined),
     } as any);
   });

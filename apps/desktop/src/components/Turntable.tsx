@@ -9,7 +9,14 @@ export interface TurntableProps {
   onSeek: (frame: number) => void;
 }
 
-export function Turntable({ playing, position, totalFrames, bpm, trackLabel, onSeek }: TurntableProps): React.JSX.Element {
+export function Turntable({
+  playing,
+  position,
+  totalFrames,
+  bpm,
+  trackLabel,
+  onSeek,
+}: TurntableProps): React.JSX.Element {
   const [dragging, setDragging] = useState(false);
   const lastAngle = useRef<number | null>(null);
 
@@ -57,7 +64,9 @@ export function Turntable({ playing, position, totalFrames, bpm, trackLabel, onS
         <div className="vinyl-grooves" />
         <div className="vinyl-label">
           <span className="vinyl-title">{trackLabel ?? "No Track"}</span>
-          <span className="vinyl-sub">{bpm > 0 ? `${bpm.toFixed(1)} BPM` : "— BPM"}</span>
+          <span className="vinyl-sub">
+            {bpm > 0 ? `${bpm.toFixed(1)} BPM` : "— BPM"}
+          </span>
         </div>
       </div>
     </div>

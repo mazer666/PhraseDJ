@@ -34,7 +34,10 @@ export function WaveformCanvas({
     if (zoom <= 1) return { start: 0, end: total };
     const span = Math.max(Math.floor(total / zoom), 1);
     const center = Math.min(Math.max(position, 0), total);
-    const start = Math.max(0, Math.min(center - Math.floor(span / 2), total - span));
+    const start = Math.max(
+      0,
+      Math.min(center - Math.floor(span / 2), total - span),
+    );
     return { start, end: start + span };
   };
 
@@ -45,7 +48,9 @@ export function WaveformCanvas({
     const x = e.clientX - rect.left;
     const progress = x / rect.width;
     const win = frameWindow(waveform.total_frames);
-    const targetFrame = Math.floor(win.start + progress * (win.end - win.start));
+    const targetFrame = Math.floor(
+      win.start + progress * (win.end - win.start),
+    );
     seek(deck, targetFrame);
   };
 
@@ -93,7 +98,12 @@ export function WaveformCanvas({
 
       if (barH > 0.5) {
         if (stem_peaks) {
-          const stems = [stem_peaks[0][i], stem_peaks[1][i], stem_peaks[2][i], stem_peaks[3][i]];
+          const stems = [
+            stem_peaks[0][i],
+            stem_peaks[1][i],
+            stem_peaks[2][i],
+            stem_peaks[3][i],
+          ];
           const sum = stems[0] + stems[1] + stems[2] + stems[3];
           if (sum > 0) {
             let top = midY - barH;
@@ -137,9 +147,30 @@ export function WaveformCanvas({
     const px = ((clamped - win.start) / (win.end - win.start)) * w;
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.fillRect(px - 1, 0, 2, h);
-  }, [waveform, position, accentColor, zoom, bpm, tempoRatio, showBeatGrid, sampleRate]);
+  }, [
+    waveform,
+    position,
+    accentColor,
+    zoom,
+    bpm,
+    tempoRatio,
+    showBeatGrid,
+    sampleRate,
+  ]);
 
-  return <canvas ref={canvasRef} className="waveform-canvas" style={{ width: "100%", height: `${height}px`, display: "block", cursor: "pointer" }} onClick={handleCanvasClick} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="waveform-canvas"
+      style={{
+        width: "100%",
+        height: `${height}px`,
+        display: "block",
+        cursor: "pointer",
+      }}
+      onClick={handleCanvasClick}
+    />
+  );
 }
 
 function hexToRgba(hex: string, alpha: number): string {
