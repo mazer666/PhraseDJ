@@ -8,22 +8,36 @@ export function StatusBar(): React.JSX.Element {
 
   useEffect(() => {
     let mounted = true;
-    app.status()
-      .then((s) => { if (mounted) setStatus(s); })
-      .catch(() => { /* commands may be unavailable in dev preview */ });
-    return () => { mounted = false; };
+    app
+      .status()
+      .then((s) => {
+        if (mounted) setStatus(s);
+      })
+      .catch(() => {
+        /* commands may be unavailable in dev preview */
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Filter for jobs that are actually running or pending.
   const activeJobs = Object.entries(stemJobs).filter(
-    ([_, job]) => job.status === "running" || job.status === "pending" || job.status === "model_downloading"
+    ([_, job]) =>
+      job.status === "running" ||
+      job.status === "pending" ||
+      job.status === "model_downloading",
   );
-  
-  const isDownloading = activeJobs.some(([_, job]) => job.status === "model_downloading");
 
-  const totalProgress = activeJobs.length > 0
-    ? activeJobs.reduce((acc, [_, job]) => acc + job.progress, 0) / activeJobs.length
-    : 0;
+  const isDownloading = activeJobs.some(
+    ([_, job]) => job.status === "model_downloading",
+  );
+
+  const totalProgress =
+    activeJobs.length > 0
+      ? activeJobs.reduce((acc, [_, job]) => acc + job.progress, 0) /
+        activeJobs.length
+      : 0;
 
   return (
     <footer className="status-bar">
@@ -43,10 +57,16 @@ export function StatusBar(): React.JSX.Element {
         {activeJobs.length > 0 && (
           <div className="status-stems-progress">
             <span>
-              {isDownloading ? "Downloading AI Model" : `Stem Analysis (${activeJobs.length})`}: {Math.round(totalProgress * 100)}%
+              {isDownloading
+                ? "Downloading AI Model"
+                : `Stem Analysis (${activeJobs.length})`}
+              : {Math.round(totalProgress * 100)}%
             </span>
             <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${totalProgress * 100}%` }} />
+              <div
+                className="progress-fill"
+                style={{ width: `${totalProgress * 100}%` }}
+              />
             </div>
           </div>
         )}

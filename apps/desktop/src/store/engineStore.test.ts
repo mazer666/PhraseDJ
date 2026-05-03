@@ -97,7 +97,7 @@ describe("engineStore – polling", () => {
 
     // One interval fires at most one tick → at most 2 deck_state calls (one per deck).
     const deckStateCalls = mockInvoke.mock.calls.filter(
-      ([cmd]) => cmd === "deck_state"
+      ([cmd]) => cmd === "deck_state",
     );
     // Allow 2 (normal) or 4 (two parallel ticks if timer fires twice within 60ms)
     // — the key invariant is there is no runaway doubling over many ticks.
@@ -121,13 +121,18 @@ describe("engineStore – mixer actions", () => {
   it("setCrossfader updates store and invokes mixer_set_crossfader", async () => {
     await useEngineStore.getState().setCrossfader(0.3);
     expect(useEngineStore.getState().crossfader).toBeCloseTo(0.3);
-    expect(mockInvoke).toHaveBeenCalledWith("mixer_set_crossfader", { value: 0.3 });
+    expect(mockInvoke).toHaveBeenCalledWith("mixer_set_crossfader", {
+      value: 0.3,
+    });
   });
 
   it("setFader for deck 0 updates faderA and invokes mixer_set_fader", async () => {
     await useEngineStore.getState().setFader(0, 0.6);
     expect(useEngineStore.getState().faderA).toBeCloseTo(0.6);
-    expect(mockInvoke).toHaveBeenCalledWith("mixer_set_fader", { deck: 0, value: 0.6 });
+    expect(mockInvoke).toHaveBeenCalledWith("mixer_set_fader", {
+      deck: 0,
+      value: 0.6,
+    });
   });
 
   it("setFader for deck 1 updates faderB", async () => {
@@ -138,6 +143,8 @@ describe("engineStore – mixer actions", () => {
   it("setMasterGain updates masterGain", async () => {
     await useEngineStore.getState().setMasterGain(0.9);
     expect(useEngineStore.getState().masterGain).toBeCloseTo(0.9);
-    expect(mockInvoke).toHaveBeenCalledWith("mixer_set_master_gain", { value: 0.9 });
+    expect(mockInvoke).toHaveBeenCalledWith("mixer_set_master_gain", {
+      value: 0.9,
+    });
   });
 });

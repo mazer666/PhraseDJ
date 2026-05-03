@@ -6,7 +6,7 @@ import { useEngineStore } from "../store/engineStore";
 
 export function Crossfader(): React.JSX.Element {
   const value = useEngineStore((s) => s.crossfader);
-  const set   = useEngineStore((s) => s.setCrossfader);
+  const set = useEngineStore((s) => s.setCrossfader);
 
   return (
     <div className="crossfader">

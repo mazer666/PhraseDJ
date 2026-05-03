@@ -37,7 +37,9 @@ Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
     drawImage: vi.fn(),
     getImageData: vi.fn().mockReturnValue({ data: new Uint8ClampedArray(4) }),
     putImageData: vi.fn(),
-    createImageData: vi.fn().mockReturnValue({ data: new Uint8ClampedArray(4) }),
+    createImageData: vi
+      .fn()
+      .mockReturnValue({ data: new Uint8ClampedArray(4) }),
     setTransform: vi.fn(),
     canvas: null,
   }),

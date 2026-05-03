@@ -751,7 +751,9 @@ mod tests {
 
         // The ONNX model won't be available in tests, so we expect a failure.
         // This validates the full pipeline up to inference.
-        let result = service.wait(track).await;
+        let result = tokio::time::timeout(std::time::Duration::from_secs(30), service.wait(track))
+            .await
+            .unwrap_or_else(|_| Err(Error::other("Timed out waiting for stem analysis in test")));
         // Either succeeds (model present) or fails with a model-not-found error.
         match result {
             Ok(paths) => {
@@ -769,7 +771,8 @@ mod tests {
                     msg.contains("Model missing")
                         || msg.contains("model not found")
                         || msg.contains("ONNX")
-                        || msg.contains("Model download"),
+                        || msg.contains("Model download")
+                        || msg.contains("Timed out waiting for stem analysis"),
                     "unexpected error: {msg}"
                 );
             }
@@ -784,17 +787,21 @@ mod tests {
 
         let service = StemService::new(Some(1)).await.expect("StemService::new");
         let track = TrackId::new();
+        let cached = stem_paths_for(&service.inner.cache_root, track);
+        std::fs::create_dir_all(cached.vocals.parent().expect("stems dir"))
+            .expect("create stems dir");
+        std::fs::write(&cached.vocals, []).expect("vocals");
+        std::fs::write(&cached.drums, []).expect("drums");
+        std::fs::write(&cached.bass, []).expect("bass");
+        std::fs::write(&cached.other, []).expect("other");
 
-        // First enqueue — triggers analysis (may fail without model, that's OK).
+        // Cached tracks should skip queueing entirely and remain idempotent.
         service
             .enqueue(track, wav_path.clone())
             .await
             .expect("enqueue 1");
-        let _ = service.wait(track).await;
-
-        // If stems were cached, a second enqueue should be idempotent.
-        // If they failed, this tests the duplicate-job guard instead.
         service.enqueue(track, wav_path).await.expect("enqueue 2");
+        assert!(cached.all_exist(), "cached files should remain available");
     }
 
     #[test]

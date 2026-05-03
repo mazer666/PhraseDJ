@@ -21,20 +21,28 @@ import { useEngineStore } from "../store/engineStore";
 const NUDGE_DELTA = 0.01;
 
 export function useKeymap(): void {
-  const play       = useEngineStore((s) => s.play);
-  const pause      = useEngineStore((s) => s.pause);
-  const sync       = useEngineStore((s) => s.sync);
+  const play = useEngineStore((s) => s.play);
+  const pause = useEngineStore((s) => s.pause);
+  const sync = useEngineStore((s) => s.sync);
   const nudgeTempo = useEngineStore((s) => s.nudgeTempo);
-  const decks      = useEngineStore((s) => s.decks);
+  const decks = useEngineStore((s) => s.decks);
+  const autoTransition = useEngineStore((s) => s.autoTransition);
+  const cue = useEngineStore((s) => s.cue);
+  const toggleStemMute = useEngineStore((s) => s.toggleStemMute);
 
   useEffect(() => {
     let keymap: Record<string, string> = {};
 
     // Load keymap from backend asynchronously; the listener is registered
     // immediately with an empty map and starts working once the load resolves.
-    app.keymapLoad()
-      .then((map) => { keymap = map; })
-      .catch(() => { /* leave keymap empty — no shortcuts active */ });
+    app
+      .keymapLoad()
+      .then((map) => {
+        keymap = map;
+      })
+      .catch(() => {
+        /* leave keymap empty — no shortcuts active */
+      });
 
     const onKeyDown = (e: KeyboardEvent) => {
       // Skip if a text input is focused so typing isn't intercepted.
@@ -44,7 +52,7 @@ export function useKeymap(): void {
       // Build the lookup key.  Modifiers use the same syntax as keymap.toml.
       const parts: string[] = [];
       if (e.ctrlKey || e.metaKey) parts.push("Ctrl");
-      if (e.altKey)  parts.push("Alt");
+      if (e.altKey) parts.push("Alt");
       if (e.shiftKey) parts.push("Shift");
       parts.push(normaliseKey(e.key));
       const lookupKey = parts.join("+");
@@ -56,12 +64,30 @@ export function useKeymap(): void {
       // scrolling the page).
       e.preventDefault();
 
-      dispatch(intent, { play, pause, sync, nudgeTempo, decks });
+      dispatch(intent, {
+        play,
+        pause,
+        sync,
+        nudgeTempo,
+        decks,
+        autoTransition,
+        cue,
+        toggleStemMute,
+      });
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [play, pause, sync, nudgeTempo, decks]);
+  }, [
+    play,
+    pause,
+    sync,
+    nudgeTempo,
+    decks,
+    autoTransition,
+    cue,
+    toggleStemMute,
+  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -69,21 +95,27 @@ export function useKeymap(): void {
 // ---------------------------------------------------------------------------
 
 interface Actions {
-  play:       (deck: 0 | 1) => Promise<void>;
-  pause:      (deck: 0 | 1) => Promise<void>;
-  sync:       (deck: 0 | 1) => Promise<void>;
+  play: (deck: 0 | 1) => Promise<void>;
+  pause: (deck: 0 | 1) => Promise<void>;
+  sync: (deck: 0 | 1) => Promise<void>;
   nudgeTempo: (deck: 0 | 1, delta: number) => Promise<void>;
-  decks:      [{ playing: boolean; loaded: boolean }, { playing: boolean; loaded: boolean }];
+  decks: [
+    { playing: boolean; loaded: boolean },
+    { playing: boolean; loaded: boolean },
+  ];
+  autoTransition: (beats: number, fromDeck?: 0 | 1) => Promise<void>;
+  cue: (deck: 0 | 1) => Promise<void>;
+  toggleStemMute: (deck: 0 | 1, stem: 0 | 1 | 2 | 3) => Promise<void>;
 }
 
 function dispatch(intent: string, actions: Actions): void {
-  const parts  = intent.split(".");
-  const ns     = parts[0];  // "deck" | "master" | "view" | "macro"
-  const scope  = parts[1];  // "A" | "B" | (global intents omit scope)
+  const parts = intent.split(".");
+  const ns = parts[0]; // "deck" | "master" | "view" | "macro"
+  const scope = parts[1]; // "A" | "B" | (global intents omit scope)
   const action = parts[2];
 
   if (ns === "deck") {
-    const deckIndex = scope === "A" ? 0 : 1 as 0 | 1;
+    const deckIndex = scope === "A" ? 0 : (1 as 0 | 1);
     dispatchDeckIntent(action, deckIndex, actions);
     return;
   }
@@ -100,8 +132,9 @@ function dispatch(intent: string, actions: Actions): void {
     }
   }
 
-  // "view.*" and "macro.*" intents are handled elsewhere (modals, etc.)
-  // and are ignored here without error.
+  if (ns === "macro" && action === "trigger_transition") {
+    actions.autoTransition(16);
+  }
 }
 
 function dispatchDeckIntent(action: string, deck: 0 | 1, a: Actions): void {
@@ -119,8 +152,22 @@ function dispatchDeckIntent(action: string, deck: 0 | 1, a: Actions): void {
     case "tempo_nudge_plus":
       a.nudgeTempo(deck, +NUDGE_DELTA);
       break;
-    // "cue", "loop_in", "loop_out", "stem_mute_*" are Phase 1 stubs:
-    // the hardware actions will be wired as each feature lands.
+    case "cue":
+      a.cue(deck);
+      break;
+    case "stem_mute_vocals":
+      a.toggleStemMute(deck, 0);
+      break;
+    case "stem_mute_drums":
+      a.toggleStemMute(deck, 1);
+      break;
+    case "stem_mute_bass":
+      a.toggleStemMute(deck, 2);
+      break;
+    case "stem_mute_other":
+      a.toggleStemMute(deck, 3);
+      break;
+    // "loop_in", "loop_out" remain stubs until loop engine lands.
     default:
       break;
   }
@@ -139,7 +186,7 @@ function dispatchDeckIntent(action: string, deck: 0 | 1, a: Actions): void {
  */
 function normaliseKey(key: string): string {
   if (key === "Escape") return "Esc";
-  if (key === " ")      return "Space";
+  if (key === " ") return "Space";
   if (key.length === 1) return key.toUpperCase();
   return key;
 }

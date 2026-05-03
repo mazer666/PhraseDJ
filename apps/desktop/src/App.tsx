@@ -15,8 +15,8 @@ import { useEngineStore } from "./store/engineStore";
 import { useKeymap } from "./hooks/useKeymap";
 
 function App(): React.JSX.Element {
-  const startPolling  = useEngineStore((s) => s.startPolling);
-  const stopPolling   = useEngineStore((s) => s.stopPolling);
+  const startPolling = useEngineStore((s) => s.startPolling);
+  const stopPolling = useEngineStore((s) => s.stopPolling);
   const [showSettings, setShowSettings] = useState(false);
 
   // Start polling deck state on mount, stop on unmount.
@@ -56,9 +56,7 @@ function App(): React.JSX.Element {
 
       <StatusBar />
 
-      {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
-      )}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
