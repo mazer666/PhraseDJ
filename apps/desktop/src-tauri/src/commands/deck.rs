@@ -40,7 +40,7 @@ pub struct DeckState {
 
 /// Load a file onto a deck (`deck` = 0 or 1).
 #[tauri::command]
-pub async fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<String, String> {
     let p = PathBuf::from(&path);
 
     // Auto-import to get TrackId (or find existing)
@@ -82,7 +82,7 @@ pub async fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> R
             stems.other.as_path(),
         ];
         match engine.load_stems(deck, &p, &arr) {
-            Ok(()) => return Ok(()),
+            Ok(()) => return Ok(track_id.to_string()),
             Err(e) => {
                 tracing::warn!(deck, error = %e, "stem loading failed, falling back to normal load");
                 // Fall through to normal load below.
@@ -90,7 +90,8 @@ pub async fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> R
         }
     }
 
-    engine.load(deck, &p).map_err(|e| e.to_string())
+    engine.load(deck, &p).map_err(|e| e.to_string())?;
+    Ok(track_id.to_string())
 }
 
 /// Toggle play/pause on a deck.

@@ -26,6 +26,9 @@ export function useKeymap(): void {
   const sync       = useEngineStore((s) => s.sync);
   const nudgeTempo = useEngineStore((s) => s.nudgeTempo);
   const decks      = useEngineStore((s) => s.decks);
+  const autoTransition = useEngineStore((s) => s.autoTransition);
+  const cue = useEngineStore((s) => s.cue);
+  const toggleStemMute = useEngineStore((s) => s.toggleStemMute);
 
   useEffect(() => {
     let keymap: Record<string, string> = {};
@@ -56,12 +59,12 @@ export function useKeymap(): void {
       // scrolling the page).
       e.preventDefault();
 
-      dispatch(intent, { play, pause, sync, nudgeTempo, decks });
+      dispatch(intent, { play, pause, sync, nudgeTempo, decks, autoTransition, cue, toggleStemMute });
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [play, pause, sync, nudgeTempo, decks]);
+  }, [play, pause, sync, nudgeTempo, decks, autoTransition, cue, toggleStemMute]);
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +77,9 @@ interface Actions {
   sync:       (deck: 0 | 1) => Promise<void>;
   nudgeTempo: (deck: 0 | 1, delta: number) => Promise<void>;
   decks:      [{ playing: boolean; loaded: boolean }, { playing: boolean; loaded: boolean }];
+  autoTransition: (beats: number, fromDeck?: 0 | 1) => Promise<void>;
+  cue: (deck: 0 | 1) => Promise<void>;
+  toggleStemMute: (deck: 0 | 1, stem: 0 | 1 | 2 | 3) => Promise<void>;
 }
 
 function dispatch(intent: string, actions: Actions): void {
@@ -100,8 +106,9 @@ function dispatch(intent: string, actions: Actions): void {
     }
   }
 
-  // "view.*" and "macro.*" intents are handled elsewhere (modals, etc.)
-  // and are ignored here without error.
+  if (ns === "macro" && action === "trigger_transition") {
+    actions.autoTransition(16);
+  }
 }
 
 function dispatchDeckIntent(action: string, deck: 0 | 1, a: Actions): void {
@@ -119,8 +126,22 @@ function dispatchDeckIntent(action: string, deck: 0 | 1, a: Actions): void {
     case "tempo_nudge_plus":
       a.nudgeTempo(deck, +NUDGE_DELTA);
       break;
-    // "cue", "loop_in", "loop_out", "stem_mute_*" are Phase 1 stubs:
-    // the hardware actions will be wired as each feature lands.
+    case "cue":
+      a.cue(deck);
+      break;
+    case "stem_mute_vocals":
+      a.toggleStemMute(deck, 0);
+      break;
+    case "stem_mute_drums":
+      a.toggleStemMute(deck, 1);
+      break;
+    case "stem_mute_bass":
+      a.toggleStemMute(deck, 2);
+      break;
+    case "stem_mute_other":
+      a.toggleStemMute(deck, 3);
+      break;
+    // "loop_in", "loop_out" remain stubs until loop engine lands.
     default:
       break;
   }
