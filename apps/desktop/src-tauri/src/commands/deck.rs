@@ -40,7 +40,11 @@ pub struct DeckState {
 
 /// Load a file onto a deck (`deck` = 0 or 1).
 #[tauri::command]
-pub async fn deck_load(deck: u32, path: String, state: State<'_, AppState>) -> Result<String, String> {
+pub async fn deck_load(
+    deck: u32,
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
     let p = PathBuf::from(&path);
 
     // Auto-import to get TrackId (or find existing)
