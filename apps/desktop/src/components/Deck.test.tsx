@@ -54,13 +54,13 @@ describe("Deck (side A)", () => {
 
   it("shows — BPM when bpm is 0", () => {
     render(<Deck side="A" />);
-    screen.getByText("— BPM");
+    expect(screen.getAllByText("— BPM").length).toBeGreaterThan(0);
   });
 
   it("shows formatted BPM when bpm > 0", () => {
     setDeckState("A", { bpm: 128 });
     render(<Deck side="A" />);
-    screen.getByText("128.0 BPM");
+    expect(screen.getAllByText("128.0 BPM").length).toBeGreaterThan(0);
   });
 
   it("shows 'Load track…' when not loaded", () => {

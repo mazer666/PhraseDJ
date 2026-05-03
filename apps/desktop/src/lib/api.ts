@@ -60,7 +60,7 @@ export interface WaveformData {
 
 export const deckApi = {
   load:   (deck: number, path: string) =>
-    invoke<void>("deck_load", { deck, path }),
+    invoke<string>("deck_load", { deck, path }),
   play:   (deck: number) => invoke<void>("deck_play",  { deck }),
   pause:  (deck: number) => invoke<void>("deck_pause", { deck }),
   seek:   (deck: number, position: number) =>
