@@ -1,0 +1,14 @@
+/Users/volker/Documents/Repos/PhraseDJ/apps/desktop/src-tauri/target/debug/deps/serde-aa56691983951acc.d: /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/volker/Documents/Repos/PhraseDJ/apps/desktop/src-tauri/target/debug/build/serde-7e84e6bb284b7b7a/out/private.rs
+
+/Users/volker/Documents/Repos/PhraseDJ/apps/desktop/src-tauri/target/debug/deps/libserde-aa56691983951acc.rlib: /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/volker/Documents/Repos/PhraseDJ/apps/desktop/src-tauri/target/debug/build/serde-7e84e6bb284b7b7a/out/private.rs
+
+/Users/volker/Documents/Repos/PhraseDJ/apps/desktop/src-tauri/target/debug/deps/libserde-aa56691983951acc.rmeta: /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/volker/Documents/Repos/PhraseDJ/apps/desktop/src-tauri/target/debug/build/serde-7e84e6bb284b7b7a/out/private.rs
+
+/Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/volker/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/volker/Documents/Repos/PhraseDJ/apps/desktop/src-tauri/target/debug/build/serde-7e84e6bb284b7b7a/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/volker/Documents/Repos/PhraseDJ/apps/desktop/src-tauri/target/debug/build/serde-7e84e6bb284b7b7a/out

@@ -37,3 +37,6 @@ opt-level = 1      # faster incremental compile while keeping some optimisation
 [profile.release]
 lto = true
 codegen-units = 1
+
+[patch.crates-io]
+mlx-sys = { path = "vendor/mlx-sys" }
