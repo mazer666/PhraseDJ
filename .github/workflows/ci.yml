@@ -23,11 +23,11 @@ jobs:
   # -------------------------------------------------------------------------
   rust:
     name: Rust (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, "${{ matrix.os }}"]
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-24.04]
+        os: [macOS, Linux]
 
     env:
       PDJ_AUDIO_LIB_DIR: ${{ github.workspace }}/native/audio/build
@@ -91,7 +91,7 @@ jobs:
             --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macOS'
         uses: codecov/codecov-action@v4
         with:
           files: lcov.info
@@ -102,7 +102,7 @@ jobs:
   # -------------------------------------------------------------------------
   frontend:
     name: Frontend (Node ${{ matrix.node }})
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     strategy:
       matrix:
         node: ["20"]
@@ -136,11 +136,11 @@ jobs:
   # -------------------------------------------------------------------------
   cpp:
     name: C++ engine (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, "${{ matrix.os }}"]
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-24.04]
+        os: [macOS, Linux]
 
     steps:
       - uses: actions/checkout@v4
@@ -180,7 +180,7 @@ jobs:
   # -------------------------------------------------------------------------
   file-length:
     name: File length check
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
@@ -193,7 +193,7 @@ jobs:
   # -------------------------------------------------------------------------
   license:
     name: License audit
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4

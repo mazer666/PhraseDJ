@@ -36,3 +36,6 @@ lcov.info
 *.db
 *.db-wal
 *.db-shm
+
+# GitHub Actions self-hosted runner
+/actions-runner/
